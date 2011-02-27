@@ -1,0 +1,898 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+ "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1"></meta>
+<meta name="keywords" content="concurrent lua"></meta>
+<meta name="description" content="ConcurrentLua. Concurrency Oriented
+  Programming in Lua."></meta>
+<title>ConcurrentLua - Introduction</title>
+<link href="stylesheet.css" rel="stylesheet" type="text/css"></link>
+</head>
+
+<body>
+
+<div class="center">
+  <img src="concurrentlua.png" alt="ConcurrentLua logo"></img>
+  <h1>ConcurrentLua</h1>
+  <p>Concurrency Oriented Programming in Lua</p>
+  <div class="navigation">
+    <a class="link" href="#overview">overview</a> &middot;
+    <a class="link" href="#introduction">introduction</a> &middot;
+    <a class="link" href="#reference">reference</a>
+  </div>
+</div>
+
+<div class="box">
+
+  <h2><a id="overview">Overview</a></h2>
+
+  <p>ConcurrentLua is a system that implements a concurrency model for the Lua
+  programming language. It is based on the share-nothing asynchronous
+  message-passing model that is employed in the Erlang programming
+  language.</p>
+
+  <p>ConcurrentLua extends Lua's coroutines with message-passing primitives, in
+  order to support concurrent programming. Distributed programming is supported
+  transparently with the same message-passing primitives.</p>
+
+  <p>ConcurrentLua is implemented as a collection of Lua modules that can be
+  loaded by any Lua program. Most of the code is written in Lua itself, with
+  minor parts written in C.</p>
+
+  <h3>Model description</h3>
+
+  <p>One of the core elements of ConcurrentLua is the <em>process</em>. A
+  process is a light-weight VM thread, that plays the same role as do processes
+  in an operating system; they don't share memory but instead they communicate
+  through some kind of interprocess communication. These processes can be
+  created and destroyed on demand, and a simple round-robin scheduler passes
+  control to them.</p>
+
+  <p>Each process is associated with a <em>mailbox</em>, a message queue for the
+  temporary storage of messages that were sent to the process. A process can
+  check its mailbox for new messages at any time, and if there are any, they can
+  be read in the order of arrival.</p>
+
+  <p>Each process is identified by a unique numeric <em>process identifier</em>,
+  or else <em>PID</em>. In addition, aliases or process names can be used
+  instead of PIDs, in order to refer to processes. These aliases and their
+  references are stored in a central repository, the <em>registry</em>.
+  Processes can edit the registry, by adding or deleting entries.</p>
+
+  <p>Error handling mechanisms are also provided in the form of
+  <em>monitors</em> and <em>links</em>. With monitors processes can monitor the
+  other processes, and get notified if the monitored processes terminate
+  abnormally. With links processes are bound together, and when one of them
+  terminates abnormally the other one is signalled and terminates, too.</p>
+
+  <p>This system also supports distributed programming and all the properties
+  that have been described map naturally onto a distributed system. Distributed
+  processes communicate with the same primitives as local processes.</p>
+
+  <p>Distribution is based on a component that is called the <em>node</em>. A
+  node represents a system runtime inside of which processes are executing.
+  Nodes can be connected to each other and communicate, thus forming a
+  <em>virtual network</em>. Distributed processes use this network in order to
+  exchange messages.</p>
+
+  <p>Each node has a name associated with it. In order for other nodes to
+  connect to each other by using only this name, a <em>port mapper daemon</em>
+  acts a nameserver. The port mapper daemon has details about the nodes running
+  under the network host that the daemon itself is bound to.</p>
+
+  <p>As processes can be created locally, it is also possible to request the
+  creation of processes on remote nodes. A remote process can then be handled as
+  if it was a local process.</p>
+
+  <p>If the nodes that form the virtual network are fully connected (every node
+  is connected bidirectionally to each other), global aliases can be used for
+  the processes. The nodes negotiate and maintain a <em>virtual global
+  registry</em> and also keep updated local copies of the registry.</p>
+
+  <p>Monitors and links for distributed processes are supported with the same
+  semantics as for local processes. Nodes take care of the task of transparently
+  handling errors between distributed processes. In addition, it is possible for
+  processes to monitor nodes as a whole.</p>
+
+  <p>Nodes are required to authenticate before they can communicate. An
+  authenticated node can then be part of the virtual network that the nodes
+  form. A simple security mechanism takes care of this task.</p>
+
+  <h3>Implementation details</h3>
+
+  <p>The implementation of ConcurrentLua is based on the Lua component system.
+  The system is organized as a collection of Lua modules and submodules. The
+  main modules are two, and provide the concurrent and distributed programming
+  functionality respectively. One could load only the concurrency module and
+  also for each module there is the option of not loading some of the submodules
+  if the functionality they provide is not needed. A stand-alone port mapper
+  daemon utility is also included.</p>
+
+  <p>The processes in the system are implemented with Lua coroutines. A process
+  is actually a Lua coroutine that yields control when the process suspends its
+  execution and resumes control when the process continues its execution.</p>
+
+  <p>The scheduling of the processes is still based on the cooperative
+  multithreading model that Lua uses. Processes voluntarily suspend their
+  execution and thus other processes get the chance to run. Nevertheless, the
+  suspending and resuming of processes is partly hidden under a higher level
+  mechanism; a process suspends its execution when waiting for a message to
+  arrive and becomes ready to be resumed when new messages have arrived in its
+  mailbox. A simple round-robin scheduler resumes the processes.</p>
+
+  <p>Any type of Lua data, with the exception of memory references, can be sent
+  inside messages. Messages can be booleans, numbers, strings, tables or
+  functions, and any combination of them. Data are automatically serialized on
+  sent and deserialized on receive, and everything is passed by value.</p>
+
+  <p>Interprocess communication between nodes, and subsequently between
+  distributed processes, is based on an asynchronous socket handler. This
+  translates to networking model that uses non-blocking sockets and periodic
+  polling. This is the approach that is mostly used today by Lua libraries.
+  Non-blocking semantics should be also used for IO such as files, pipes,
+  etc.</p>
+
+  <h2><a id="introduction">Introduction</a></h2>
+
+  <p>Some examples will provide an introduction to the most essential
+  properties of the system, from process creation and message passing to
+  distributed programming and error handling.</p>
+
+  <h3>Creating processes</h3>
+
+  <p>Processes are created using the <code>spawn()</code> function. The
+  <code>spawn()</code> function takes at least one argument; the function that
+  contains the command set that the process will execute. Any additional
+  arguments are passed directly as arguments of the function.</p>
+
+  <p>The following example demonstrates the creation of a process. The process
+  just prints a message as many times as specified:</p>
+
+  <div class="verbatim"><pre>
+require 'concurrent'
+
+function hello_world(times)
+    for i = 1, times do print('hello world') end
+    print('done')
+end
+
+concurrent.spawn(hello_world, 3)
+
+concurrent.loop()</pre></div>
+
+  <p>The output would be:</p>
+
+  <div class="verbatim"><pre>
+hello world
+hello world
+hello world
+done</pre></div>
+
+  <p>First the system is loaded:</p>
+
+  <div class="verbatim"><pre>
+require 'concurrent'</pre></div>
+
+  <p>The function that the process will execute is defined next:</p>
+
+  <div class="verbatim"><pre>
+function hello_world(times)
+    for i = 1, times do print('hello world') end
+    print('done')
+end</pre></div>
+
+  <p>A new process is created:</p>
+
+  <div class="verbatim"><pre>
+concurrent.spawn(hello_world, 3)</pre></div>
+
+  <p>The system's infinite loop is called last:</p>
+
+  <div class="verbatim"><pre>
+concurrent.loop()</pre></div>
+
+  <h3>Exchanging messages</h3>
+
+  <p>Processes can exchange messages by using the <code>send()</code> and
+  <code>receive()</code> functions. Also, the <code>self()</code> function can
+  be used to get the PID of the calling process.</p>
+
+  <p>The following program implements two processes that exchange messages and
+  then terminate:</p>
+
+  <div class="verbatim"><pre>
+require 'concurrent'
+
+function pong()
+    while true do
+        local msg = concurrent.receive()
+        if msg.body == 'finished' then
+            break
+        elseif msg.body == 'ping' then
+            print('pong received ping')
+            concurrent.send(msg.from, { body = 'pong' })
+        end
+    end
+    print('pong finished')
+end
+
+function ping(n, pid)
+    for i = 1, n do
+        concurrent.send(pid, {
+            from = concurrent.self(),
+            body = 'ping'
+        })
+        local msg = concurrent.receive()
+        if msg.body == 'pong' then
+            print('ping received pong')
+        end
+    end
+    concurrent.send(pid, {
+        from = concurrent.self(),
+        body = 'finished'
+    })
+    print('ping finished')
+end
+
+pid = concurrent.spawn(pong)
+concurrent.spawn(ping, 3, pid)
+
+concurrent.loop()</pre></div>
+
+  <p>The output would be:</p>
+
+  <div class="verbatim"><pre>
+pong received ping
+ping received pong
+pong received ping
+ping received pong
+pong received ping
+ping received pong
+pong finished
+ping finished</pre></div>
+
+  <p>After the <em>pong</em> process is created, the <em>ping</em> process is
+  supplied with the PID of the <em>pong</em> process:</p>
+
+  <div class="verbatim"><pre>
+pid = concurrent.spawn(pong)
+concurrent.spawn(ping, 3, pid)</pre></div>
+
+  <p>The <em>ping</em> process sends a message:</p>
+
+  <div class="verbatim"><pre>
+concurrent.send(pid, {
+    from = concurrent.self(),
+    body = 'ping'
+})</pre></div>
+
+  <p>The <em>pong</em> process waits for a message to arrive and saves it in a
+  variable when it does:</p>
+
+  <div class="verbatim"><pre>
+local msg = concurrent.receive()</pre></div>
+
+  <p>The <em>pong</em> process replies:</p>
+
+  <div class="verbatim"><pre>
+  concurrent.send(msg.from, { body = 'pong' })</pre></div>
+
+  <p>The <em>pong</em> process terminates after having received a notification
+  from the <em>ping</em> process.</p>
+
+  <h3>Registering process names</h3>
+
+  <p>Instead of using process PIDs for sending messages, process names can also
+  be used. The <code>register()</code> function can be used to create an alias
+  for a process in the registry:</p>
+
+  <div class="verbatim">
+    <pre>
+require 'concurrent'
+
+function pong()
+    while true do
+        local msg = concurrent.receive()
+        if msg.body == 'finished' then
+            break
+        elseif msg.body == 'ping' then
+            print('pong received ping')
+            concurrent.send(msg.from, { body = 'pong' })
+        end
+    end
+    print('pong finished')
+end
+
+function ping(n)
+    for i = 1, n do
+        concurrent.send('pong', {
+            from = concurrent.self(),
+            body = 'ping'
+        })
+        local msg = concurrent.receive()
+        if msg.body == 'pong' then
+            print('ping received pong')
+        end
+    end
+    concurrent.send('pong', {
+        from = concurrent.self(),
+        body = 'finished'
+    })
+    print('ping finished')
+end
+
+pid = concurrent.spawn(pong)
+concurrent.register('pong', pid)
+concurrent.spawn(ping, 3)
+
+concurrent.loop()</pre></div>
+
+  <p>The only change from the previous example is the destination that the
+  <em>ping</em> process sends messages to:</p>
+
+  <div class="verbatim"><pre>
+concurrent.send('pong', {
+    from = concurrent.self(),
+    body = 'ping'
+})</pre></div>
+
+  <p>And:</p>
+
+  <div class="verbatim"><pre>
+concurrent.send('pong', {
+    from = concurrent.self(),
+    body = 'finished'
+})</pre></div>
+
+  <p>And the <em>pong</em> process now registers its name:</p>
+
+  <div class="verbatim"><pre>
+concurrent.register('pong', pid)</pre></div>
+
+  <p>Therefore the <em>ping</em> process isn't supplied with the PID of the
+  <em>pong</em> process.</p>
+
+  <h3>Distributed message passing</h3>
+
+  <p>Processes in different nodes can still communicate with the same message
+  passing primitives. Remote processes are denoted by their PID or alias and the
+  node they are executing under. The previous example could be broken into two
+  programs, one for each process.</p>
+
+  <p>The code for the <em>pong</em> process:</p>
+
+  <div class="verbatim"><pre>
+require 'concurrent'
+
+function pong()
+    while true do
+        local msg = concurrent.receive()
+        if msg.body == 'finished' then
+            break
+        elseif msg.body == 'ping' then
+            print('pong received ping')
+            concurrent.send(msg.from, { body = 'pong' })
+        end
+    end
+    print('pong finished')
+end
+
+concurrent.init('pong@gaia')
+
+pid = concurrent.spawn(pong)
+
+concurrent.register('pong', pid)
+concurrent.loop()
+concurrent.shutdown()</pre></div>
+
+  <p>And the code for the <em>ping</em> process:</p>
+
+  <div class="verbatim"><pre>
+require 'concurrent'
+
+function ping(n)
+    for i = 1, n do
+        concurrent.send({ 'pong', 'pong@gaia' }, {
+            from = { concurrent.self(), concurrent.node() },
+            body = 'ping'
+        })
+        local msg = concurrent.receive()
+        if msg.body == 'pong' then
+            print('ping received pong')
+        end
+    end
+    concurrent.send({ 'pong', 'pong@gaia' }, {
+        from = { concurrent.self(), concurrent.node() },
+        body = 'finished'
+    })
+    print('ping finished')
+end
+
+concurrent.spawn(ping, 3)
+
+concurrent.init('ping@selene')
+concurrent.loop()
+concurrent.shutdown()</pre></div>
+
+  <p>The output of the <em>pong</em> process would be:</p>
+
+  <div class="verbatim"><pre>
+pong received ping
+pong received ping
+pong received ping
+pong finished</pre></div>
+
+  <p>And the output of the <em>ping</em> process would be:</p>
+
+  <div class="verbatim"><pre>
+ping received pong
+ping received pong
+ping received pong
+ping finished</pre></div>
+
+  <p>In this example the runtime system is running in distributed mode. In order
+  for this to happen, first the port mapper daemon has to be started. This can
+  done by typing in a command line shell:</p>
+
+  <div class="verbatim"><pre>
+$ clpmd</pre></div>
+
+  <p>The code that initializes the node that the <em>pong</em> process is
+  running on:</p>
+
+  <div class="verbatim"><pre>
+concurrent.init('pong@gaia')</pre></div>
+
+  <p>And the code for the <em>ping</em> process:</p>
+
+  <div class="verbatim"><pre>
+concurrent.init('ping@selene')</pre></div>
+
+  <p>The previous two code snippets register to the port mapper daemon, the port
+  that each node is listening to. Both nodes unregister their port with:</p>
+
+  <div class="verbatim"><pre>
+concurrent.shutdown()</pre></div>
+
+  <p>The only other changes in this example are the destination that the
+  messages are sent to, along with the introduction of the <code>node()</code>
+  function that returns the name of the node that the calling process is running
+  on:</p>
+
+  <div class="verbatim"><pre>
+concurrent.send({ 'pong', 'pong@gaia' }, {
+    from = { concurrent.self(), concurrent.node() },
+    body = 'ping'
+})</pre></div>
+
+  <p>And later:</p>
+
+  <div class="verbatim"><pre>
+concurrent.send({ 'pong', 'pong@gaia' }, {
+    from = { concurrent.self(), concurrent.node() },
+    body = 'finished'
+})</pre></div>
+
+  <h3>Handling error</h3>
+
+  <p>One approach to handle errors in processes is the notion of linked
+  processes. Two processes are bound together and if one of them terminates
+  abnormally the other one terminates, too. The <code>link()</code> function can
+  be used to link processes:</p>
+
+  <div class="verbatim"><pre>
+require 'concurrent'
+
+function ping(n, pid)
+    concurrent.link(pid)
+    for i = 1, n do
+        concurrent.send(pid, {
+            from = concurrent.self(),
+            body = 'ping'
+        })
+        local msg = concurrent.receive()
+        if msg.body == 'pong' then
+            print('ping received pong')
+        end
+    end
+    print('ping finished')
+    concurrent.exit('finished')
+end
+
+function pong()
+    while true do
+        local msg = concurrent.receive()
+        if msg.body == 'ping' then
+            print('pong received ping')
+            concurrent.send(msg.from, { body = 'pong' })
+        end
+    end
+    print('pong finished')
+end
+
+pid = concurrent.spawn(pong)
+concurrent.spawn(ping, 3, pid)
+
+concurrent.loop()</pre></div>
+
+  <p>The output would be:</p>
+
+  <div class="verbatim"><pre>
+pong received ping
+ping received pong
+pong received ping
+ping received pong
+pong received ping
+ping received pong
+pong finished</pre></div>
+
+  <p>The <em>pong</em> process never reaches its last line, because it
+  terminates when the <em>ping</em> process exits.</p>
+
+  <p>The code that links the processes is:</p>
+
+  <div class="verbatim"><pre>
+concurrent.link(pid)</pre></div>
+
+  <p>The <code>exit()</code> function is used to make the calling function quit
+  abnormally:</p>
+
+  <div class="verbatim"><pre>
+concurrent.exit('finished')</pre></div>
+
+  <p>It is also possible to trap the exit signal of the terminating process. In
+  this case a special message is received:</p>
+
+  <div class="verbatim"><pre>
+require 'concurrent'
+
+concurrent.setoption('trapexit', true)
+
+function pong()
+    while true do
+        local msg = concurrent.receive()
+        if msg.signal == 'EXIT' then
+            break
+        elseif msg.body == 'ping' then
+            print('pong received ping')
+            concurrent.send(msg.from, { body = 'pong' })
+        end
+    end
+    print('pong finished')
+end
+
+function ping(n, pid)
+    concurrent.link(pid)
+    for i = 1, n do
+        concurrent.send(pid, {
+            from = concurrent.self(),
+            body = 'ping'
+        })
+        local msg = concurrent.receive()
+        if msg.body == 'pong' then
+            print('ping received pong')
+        end
+    end
+    print('ping finished')
+    concurrent.exit('finished')
+end
+
+pid = concurrent.spawn(pong)
+concurrent.spawn(ping, 3, pid)
+
+concurrent.loop()</pre></div>
+
+  <p>The output would be:</p>
+
+  <div class="verbatim"><pre>
+pong received ping
+ping received pong
+pong received ping
+ping received pong
+pong received ping
+ping received pong
+pong finished
+ping finished</pre></div>
+
+  <p>There is an option related to process linking that can be set with the
+  <code>setoption()</code> function, specifically the <code>trapexit</code>
+  option:</p>
+
+  <div class="verbatim"><pre>
+concurrent.setoption('trapexit', true)</pre></div>
+
+  <p>Then the <em>pong</em> process receives a special exit message:</p>
+
+  <div class="verbatim"><pre>
+if msg.signal == 'EXIT' then
+    break
+</pre></div>
+
+  <p>Alternatively, monitors that are based on notification messages, can be
+  also used for error handling.</p>
+
+  <h2><a id="reference">Reference</a></h2>
+
+  <p>A list of all the available functions and their description.</p>
+
+  <h3>Processes</h3>
+
+  <p><code>spawn(body, ...)</code></p>
+
+  <div class="description"><p>Creates a process which will execute the body
+  function. Any extra arguments can be passed to the executing function. The PID
+  of the new process is returned. In case of error <code>nil</code> and an error
+  message are returned.</p></div>
+
+  <p><code>spawn(node, body, ...)</code></p>
+
+  <div class="description"><p>Creates a process in a remote node which is a
+  string in the format <code>'nodename@hostname'</code> and the new process will
+  execute the body function. The PID of the new process is returned. In case of
+  error <code>nil</code> and an error message are returned.</p></div>
+
+  <p><code>self()</code></p>
+
+  <div class="description"><p>Returns the PID of the calling process.</p></div>
+
+  <p><code>isalive(process)</code></p>
+
+  <div class="description"><p>Checks if the process, which can be specified by
+  PID or by its registered string name, is alive. Returns <code>true</code> if
+  the process is alive, and <code>false</code> otherwise.</p></div>
+
+  <p><code>exit(reason)</code></p>
+
+  <div class="description"><p>Exits abnormally the calling process with the
+  specified <code>reason</code> string as a cause of exit.</p></div>
+
+  <h3>Messages</h3>
+
+  <p><code>receive([timeout])</code></p>
+
+  <div class="description"><p>Receives the next message in the mailbox of the
+  calling process. If the mailbox is empty it waits indefinitely for a message
+  to arrive, unless a <code>timeout</code> number in milliseconds is specified.
+  A message of any type, that depends on what was sent, is returned.</p></div>
+
+  <p><code>send(process, message)</code></p>
+
+  <div class="description"><p>Sends to the destination <code>process</code> a
+  <code>message</code> which can be one of: boolean, number, string, table,
+  function. Returns <code>true</code> if the message was send successfully, and
+  <code>false</code> if not.</p></div>
+
+  <h3>Scheduling</h3>
+
+  <p><code>sleep(time)</code></p>
+
+  <div class="description"><p>Suspends implicitly the calling process for the
+  specified <code>time</code>, the number of milliseconds.</p></div>
+
+  <p><code>loop([timeout])</code></p>
+
+  <div class="description"><p>Calls the system's infinite loop which executes
+  the process scheduler until all the processes have terminated, or unless the
+  specified <code>timeout</code>, the number of milliseconds, has
+  expired.</p></div>
+
+  <p><code>interrupt()</code></p>
+
+  <div class="description"><p>Interrupts the infinite loop of the process
+  scheduler.</p></div>
+
+  <p><code>step([timeout])</code></p>
+
+  <div class="description"><p>Executes one step of the process scheduler unless
+  the specified <code>timeout</code>, the number of milliseconds, has
+  expired.</p></div>
+
+  <p><code>tick()</code></p>
+
+  <div class="description"><p>Forwards the system's clock by one tick.</p></div>
+
+  <h3>Options</h3>
+
+  <p><code>setoption(key, value)</code></p>
+
+  <div class="description"><p>Sets the <code>key</code> string option to the
+  specified <code>value</code>, the type of which depends on the
+  option.</p></div>
+
+  <p><code>getoption(key)</code></p>
+
+  <div class="description"><p>Returns the value of the <code>key</code> string
+  option.</p></div>
+
+  <h3>Node</h3>
+
+  <p><code>init(node)</code></p>
+
+  <div class="description">
+
+    <p>Makes the runtime system a distributed node. The
+    first argument is the name string of the <code>node</code>, which can be
+    either in <code>'nodename'</code> or <code>'nodename@hostname'</code>
+    format.</p>
+
+    <p>If the <code>'shortnames'</code> option is set to <code>true</code>, then
+    short names are used instead of fully qualified domain names. If the
+    <code>'connectall'</code> option is set to <code>false</code>, then a fully
+    connected virtual network between the nodes will not be maintained.</p>
+
+  </div>
+
+  <p><code>shutdown()</code></p>
+
+  <div class="description"><p>Makes the runtime system stop being a distributed
+  node.</p></div>
+
+  <p><code>node()</code></p>
+
+  <div class="description"><p>Returns the name of the node the calling process
+  is running on.</p></div>
+
+  <p><code>nodes()</code></p>
+
+  <div class="description"><p>Returns a table with the nodes that the node the
+  calling process is running on is connected to.</p></div>
+
+  <p><code>isnodealive()</code></p>
+
+  <div class="description"><p>Returns <code>true</code> if the local node has
+  been initialized, and <code>false</code> otherwise.</p></div>
+
+  <p><code>monitornode(node)</code></p>
+
+  <div class="description"><p>The calling process starts monitoring the
+  specified <code>node</code>, which is a string of the format
+  <code>'nodename@hostname'</code>.</p></div>
+
+  <p><code>demonitornode(node)</code></p>
+
+  <div class="description"><p>The calling process stops monitoring the specified
+  <code>node</code>, which is a string of the format
+  <code>'nodename@hostname'</code>.</p></div>
+
+  <h3>Security</h3>
+
+  <p><code>setcookie(secret)</code></p>
+
+  <div class="description"><p>Sets the pre-shared <code>secret</code> key, a
+  string, also known as the <em>magic cookie</em>, that will be used for node
+  authentication.</p></div>
+
+  <p><code>getcookie()</code></p>
+
+  <div class="description"><p>Returns the pre-shared secret key, also known as
+  the <em>magic cookie</em>, that is being used for node
+  authentication.</p></div>
+
+  <h3>Registering</h3>
+
+  <p><code>register(name, pid)</code></p>
+
+  <div class="description"><p>Registers the <code>name</code> string for the
+  given process <code>pid</code>.</p></div>
+
+  <p><code>unregister(name)</code></p>
+
+  <div class="description"><p>Unregisters the process with the <code>name</code>
+  string.</p></div>
+
+  <p><code>whereis(name)</code></p>
+
+  <div class="description"><p>Returns the PID of the process with the registered
+  <code>name</code> string.</p></div>
+
+  <p><code>registered()</code></p>
+
+  <div class="description"><p>Returns a table with all the registered process
+  names.</p></div>
+
+  <h3>Linking</h3>
+
+  <p><code>link(process)</code></p>
+
+  <div class="description">
+
+    <p>The calling process gets linked with the specified
+    <code>process</code>, which can be either a PID, a registered name, or a
+    remote process. A remote process is a table with two elements, the remote
+    process PID or registered name and the node's name in the format
+    <code>'nodename@hostname' </code>.</p>
+
+    <p>The <code>'trapexit'</code> option can be set to <code>true</code>, if
+    exit signals between linked processes are to be trapped.</p>
+
+  </div>
+
+  <p><code>unlink(process)</code></p>
+
+  <div class="description"><p>The calling process gets unlinked with the
+  specified <code>process</code>, which can be either a PID, a registered name,
+  or a remote process. A remote process is a table with two elements, the remote
+  process PID or registered name and the node's name in the format <code>
+  'nodename@hostname'</code>.</p></div>
+
+  <p><code>spawnlink(body, ...)</code></p>
+
+  <div class="description">
+
+    <p>Creates a process which will execute the <code> body</code> function and
+    the calling function also gets linked to the new process. Any extra
+    arguments can be passed to the executing function. The PID of the new
+    process is returned. In case of error <code>nil</code> and an error message
+    are returned.</p>
+
+    <p>The <code>'trapexit'</code> option can be set to <code>true</code>, if
+    exit signals between linked processes are to be trapped.</p>
+
+  </div>
+
+  <p><code>spawnlink(node, body, ...)</code></p>
+
+  <div class="description">
+
+    <p>Creates a process in a remote <code>node</code> which is a string in the
+    format <code>'nodename@hostname'</code>, the new process will execute the
+    <code>body</code> function, and also the calling process gets linked to the
+    newly created process. The PID of the new process is returned. In case of
+    error <code>nil</code> and an error message are returned.</p>
+
+    <p>The <code>'trapexit'</code> option can set to <code>true</code>, if exit
+    signals between linked processes are to be trapped.</p>
+
+  </div>
+
+  <h3>Monitoring</h3>
+
+  <p><code>monitor(process)</code></p>
+
+  <div class="description"><p>The calling process starts monitoring the
+  specified <code>process</code>, which can be either a PID, a registered name,
+  or a remote process. A remote process is a table with two elements, the remote
+  process PID or registered name and the node's name in the format
+  <code>'nodename@hostname'</code>.</p></div>
+
+  <p><code>demonitor(process)</code></p>
+
+  <div class="description"><p>The calling process stops monitoring the specified
+  <code>process</code>, which can be either a PID, a registered name, or a
+  remote process. A remote process is a table with two elements, the remote
+  process PID or registered name and the node's name in the format <code>
+  'nodename@hostname'</code>.</p></div>
+
+  <p><code>spawnmonitor(body, ...)</code></p>
+
+  <div class="description"><p>Creates a process which will execute the <code>
+  body</code> function and the calling function also starts monitoring the new
+  process. Any extra arguments can be passed to the executing function. The PID
+  of the new process is returned. In case of error <code>nil</code> and an error
+  message are returned.</p></div>
+
+  <p><code>spawnmonitor(node, body, ...)</code></p>
+
+  <div class="description"><p>Creates a process in a remote <code>node</code>
+  which is a string in the format <code>'nodename@hostname'</code>, the new
+  process will execute the <code>body</code> function, and also the calling
+  process starts monitoring the newly created process. The PID of the new
+  process is returned. In case of error <code>nil</code> and an error message
+  are returned.</p></div>
+
+</div>
+
+<div class="center">
+  <div class="navigation">
+    <a class="link" href="#overview">overview</a> &middot;
+    <a class="link" href="#introduction">introduction</a> &middot;
+    <a class="link" href="#reference">reference</a>
+  </div>
+</div>
+
+</body>
+
+</html>
+

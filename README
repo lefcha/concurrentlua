@@ -1,0 +1,52 @@
+				 ConcurrentLua
+
+Description
+
+  ConcurrentLua is a system that implements a concurrency model for the Lua
+  programming language. It is based on the share-nothing asynchronous
+  message-passing model that is employed in the Erlang programming language.
+
+  ConcurrentLua extends Lua's coroutines with message-passing primitives, in
+  order to support concurrent programming. Distributed programming is supported
+  transparently with the same message-passing primitives.
+
+  ConcurrentLua is implemented as a collection of Lua modules that can be
+  loaded by any Lua program. Most of the code is written in Lua itself, with
+  minor parts written in C.
+
+
+Website
+
+  http://github.com/lefcha/concurrentlua
+
+
+Changes
+
+  All the changes in each new release up to the latest are in the NEWS file.
+
+
+Installation
+
+  The LuaSocket and Copas modules are runtime dependencies.
+
+  The new package system for Lua 5.1 is used and a makefile is supplied to
+  build and install:
+
+    make all
+    make install
+
+
+Documentation
+
+  The detailed reference manual can be found in doc/manual.html.
+
+
+License
+
+  Released under the terms and conditions of the MIT/X11 license, included in
+  the LICENSE file.
+
+
+Authors
+
+  See AUTHORS file.

@@ -1,0 +1,24 @@
+ConcurrentLua 1.0.6 - 27 Feb 2011
+  - Project moved to GitHub.
+  - Updates to the documentation and other information files.
+
+ConcurrentLua 1.0.5 - 9 Mar 2010
+  - Bug fix; process name registrations in distributed mode sometimes not
+    working.
+
+ConcurrentLua 1.0.4 - 13 Feb 2010
+  - Bug fix; cltime.time() problem affecting the scheduler in Mac OS X.
+
+ConcurrentLua 1.0.3 - 23 May 2009
+  - Bug fix; time calculation for the root process while sleeping was wrong.
+  - Minor enhancements to the serializer in the handling of tables.
+
+ConcurrentLua 1.0.2 - 21 Jun 2008
+  - Minor enhancement to the serializer in the handling of strings.
+
+ConcurrentLua 1.0.1 - 24 Mar 2008
+  - Bug fix; cltime.time() overflow in 32-bit architectures caused problems to
+    the scheduler.
+
+ConcurrentLua 1.0 - 31 Dec 2007
+  - Initial release.

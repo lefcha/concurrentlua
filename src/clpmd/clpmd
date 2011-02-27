@@ -1,0 +1,61 @@
+#!/usr/bin/lua
+
+require 'socket'
+require 'copas'
+
+require 'cldaemon'
+
+database = {}
+
+server = socket.bind('*', 9634)
+
+function handler(socket)
+    socket = copas.wrap(socket)
+    while true do
+        local data = socket:receive()
+        if not data then
+            break
+        end
+
+        local name, port = string.match(data, '^%+ ([%w_]+@[%w-.]+) (%d+)$')
+        if name and port and not database[name] then
+            database[name] = port
+            print(name .. ' = ' .. port)
+        end
+        
+        local name, port = string.match(data, '^%= ([%w_]+@[%w-.]+) (%d+)$')
+        if name and port and database[name] then
+            database[name] = port
+            print(name .. ' = ' .. port)
+        end
+
+        local name = string.match(data, '^%- ([%w_]+@[%w-.]+)$')
+        if name and database[name] then
+            database[name] = nil
+            print(name .. ' = 0')
+        end
+
+        local name = string.match(data, '^%? ([%w_]+@[%w-.]+)$')
+        if name then
+            if database[name] then
+                socket:send(database[name] .. '\r\n')
+            else
+                socket:send('0\r\n')
+            end
+        end
+
+        if string.find(data, '^%*$') then
+            local s = ''
+            for k, v in pairs(database) do
+                s = s .. k .. '=' .. v .. ',' 
+            end
+            socket:send(s .. '\r\n')
+        end
+    end
+end
+
+cldaemon.daemon()
+
+copas.addserver(server, handler)
+copas.loop()
+
