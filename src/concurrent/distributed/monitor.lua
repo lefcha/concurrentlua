@@ -1,17 +1,18 @@
 -- Submodule for monitoring of distributed processes.
-module('concurrent._distributed._monitor', package.seeall)
+local _monitor = {}
 
 -- The existing versions of the monitoring related functions are renamed.
-_monitor = concurrent._monitor.monitor
-_demonitor = concurrent._monitor.demonitor
-_notify = concurrent._monitor.notify
+_monitor._monitor = concurrent._monitor.monitor
+_monitor._spawnmonitor = concurrent._monitor.spawnmonitor
+_monitor._demonitor = concurrent._monitor.demonitor
+_monitor._notify = concurrent._monitor.notify
 
 -- Starts monitoring the specified process.  If the destination process is local
 -- the old renamed version of the function is called, otherwise a monitor
 -- request is sent to the node where the destination process is executing under.
-function monitor(dest)
+function _monitor.monitor(dest)
     if type(dest) ~= 'table' then
-        return _monitor(concurrent.whereis(dest))
+        return _monitor._monitor(concurrent.whereis(dest))
     end
 
     local s = concurrent.self()
@@ -21,7 +22,7 @@ function monitor(dest)
 end
 
 -- Handles monitor requests from a remote process. 
-function controller_monitor(msg)
+function _monitor.controller_monitor(msg)
     local monitors = concurrent._monitor.monitors
     local pid = concurrent.whereis(msg.to.pid)
     if not pid then
@@ -41,7 +42,7 @@ end
 
 -- Creates a process either local or remote which is also monitored by the
 -- calling process.
-function spawnmonitor(...)
+function _monitor.spawnmonitor(...)
     local pid, errmsg = concurrent.spawn(...)
     if not pid then
         return nil, errmsg
@@ -53,9 +54,9 @@ end
 -- Stops monitoring the specified process.  If the destination process is local
 -- the old version of the function is called, otherwise a demonitor request is
 -- sent to the node where the destination process is executing under.
-function demonitor(dest)
+function _monitor.demonitor(dest)
     if type(dest) ~= 'table' then
-        return _demonitor(concurrent.whereis(dest))
+        return _monitor._demonitor(concurrent.whereis(dest))
     end
 
     local s = concurrent.self()
@@ -65,7 +66,7 @@ function demonitor(dest)
 end
 
 -- Handles demonitor requests from a remote process. 
-function controller_demonitor(msg)
+function _monitor.controller_demonitor(msg)
     local monitors = concurrent._monitor.monitors
     local pid = concurrent.whereis(msg.to.pid)
     if not pid then
@@ -84,19 +85,19 @@ end
 
 -- Notifies all processes that are monitoring processes in a node to which the
 -- connection is lost.
-function notify_all(deadnode)
+function _monitor.notify_all(deadnode)
     for k, v in pairs(concurrent._monitor.monitors) do
        if v[2] == deadnode then
-           notify(k, v, 'noconnection')
+           _monitor.notify(k, v, 'noconnection')
        end
     end
 end
 
 -- Notifies a single process that is monitoring processes in and node to which
 -- the connection is lost.
-function notify(dest, dead, reason)
+function _monitor.notify(dest, dead, reason)
     if type(dest) ~= 'table' then
-        return _notify(concurrent.whereis(dest), dead, reason)
+        return _monitor._notify(concurrent.whereis(dest), dead, reason)
     end
 
     concurrent.send(dest, { signal = 'DOWN', from = { dead,
@@ -105,14 +106,17 @@ end
 
 -- Controllers to handle monitor and demonitor requests.
 concurrent._distributed._network.controllers['MONITOR'] =
-    controller_monitor
+    _monitor.controller_monitor
 concurrent._distributed._network.controllers['DEMONITOR'] =
-    controller_demonitor
+    _monitor.controller_demonitor
 
 -- Notifies all processes that are monitoring processes in a node to which the
 -- connection is lost.
-table.insert(concurrent._distributed._network.onfailure, notify_all)
+table.insert(concurrent._distributed._network.onfailure, _monitor.notify_all)
 
-concurrent.monitor = monitor
-concurrent.demonitor = demonitor
-concurrent._monitor.notify =  notify
+concurrent.monitor = _monitor.monitor
+concurrent.spawnmonitor = _monitor.spawnmonitor
+concurrent.demonitor = _monitor.demonitor
+concurrent._monitor.notify =  _monitor.notify
+
+return _monitor

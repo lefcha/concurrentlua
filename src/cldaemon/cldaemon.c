@@ -24,45 +24,40 @@ cldaemon_daemon(lua_State *lua)
 	switch (fork()) {
 	case -1:
 		fprintf(stderr, "forking; %s\n", strerror(errno));
-		exit(1);
+		lua_pushboolean(lua, 0);
+		return 1;
+		/* NOTREACHED */
 		break;
 	case 0:
 		break;
 	default:
 		exit(0);
+		/* NOTREACHED */
 		break;
 	}
 
 	if (setsid() == -1) {
 		fprintf(stderr, "creating session; %s\n", strerror(errno));
-		exit(1);
 	}
-	switch (fork()) {
-	case -1:
-		fprintf(stderr, "creating session; %s\n", strerror(errno));
-		exit(1);
-		break;
-	case 0:
-		break;
-	default:
-		exit(0);
-		break;
-	}
+
+	chdir("/");
 
 	close(STDIN_FILENO);
 	close(STDOUT_FILENO);
 	close(STDERR_FILENO);
-	if (open("/dev/null", O_RDWR) != -1) {
-		dup(STDIN_FILENO);
-		dup(STDIN_FILENO);
-	}
+
+	if (open("/dev/null", O_RDWR) == -1 ||
+	    dup(STDIN_FILENO) == -1 ||
+	    dup(STDIN_FILENO) == -1)
+		fprintf(stderr, "duplicating file descriptors; %s\n",
+		    strerror(errno));
 #endif
 
 	return 0;
 }
 
 /* The cldaemon library. */
-static const luaL_reg lib[] = {
+static const luaL_Reg lib[] = {
 	{ "daemon", cldaemon_daemon },
 	{ NULL, NULL }
 };
@@ -74,7 +69,11 @@ LUALIB_API int
 luaopen_cldaemon(lua_State *lua)
 {
 
-	luaL_openlib(lua, "cldaemon", lib, 0);
-
+#if LUA_VERSION_NUM < 502
+	luaL_register(lua, "cldaemon", lib);
+#else
+	luaL_newlib(lua, lib);
+	lua_setglobal(lua, "cldaemon");
+#endif
 	return 1;
 }

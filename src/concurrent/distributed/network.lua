@@ -1,18 +1,18 @@
 -- Submodule for handling all networking operations between nodes.
-module('concurrent._distributed._network', package.seeall)
-
 require 'socket'
 require 'copas'
 require 'mime'
 require 'cltime'
 
-nodename = nil                  -- The node's unique name.
+local _network = {}
 
-connections = {}                -- Active connections to other nodes.
+_network.nodename = nil         -- The node's unique name.
 
-controllers = {}                -- Functions that handle incoming requests.
+_network.connections = {}       -- Active connections to other nodes.
 
-onfailure = {}                  -- Functions to execute on node failure.
+_network.controllers = {}       -- Functions that handle incoming requests.
+
+_network.onfailure = {}         -- Functions to execute on node failure.
 
 concurrent._process.processes[-1] = -1  -- The node is a process with PID of -1.
 concurrent._message.mailboxes[-1] = {}  -- The mailbox of the node.
@@ -26,14 +26,14 @@ concurrent._option.options.keepalivetimeout = 60 * 1000  -- Keep alive timeout.
 -- is listening to, then initializing the connection and sending the first
 -- handshake message that contains useful information about nodes.  Returns a
 -- socket to the destination node.
-function connect(url)
+function _network.connect(url)
     local node, host = string.match(url, '^(%a[%w_]*)@(.+)$')
     if not node or not host then
         return
     end
 
-    if connections[url] then
-        return connections[url]
+    if _network.connections[url] then
+        return _network.connections[url]
     end
     
     local pmd = socket.connect(host, 9634)
@@ -50,15 +50,15 @@ function connect(url)
             return
         end
 
-        connections[url] = client
+        _network.connections[url] = client
 
         concurrent.send({ -1, url }, { subject = 'HELLO',
-            from = { node = nodename }, nodes = concurrent.nodes(),
+            from = { node = _network.nodename }, nodes = concurrent.nodes(),
             names = concurrent._register.names })
         
         if concurrent.getoption('keepalive') then
-            concurrent._distributed._process.spawn_system(keepalive_process,
-                url)
+            concurrent._distributed._process.spawn_system(
+                _network.keepalive_process, url)
         end
 
         return client
@@ -67,14 +67,14 @@ end
 
 -- Continuously sends echo messages to a node and waits for echo replies.  If
 -- no reply has been received the connection to that node is closed.
-function keepalive_process(name)
+function _network.keepalive_process(name)
     local timeouts = concurrent._scheduler.timeouts
     local timeout = concurrent.getoption('keepalivetimeout')
 
     while true do
         local timer = cltime.time() + timeout
 
-        if not connections[name] then
+        if not _network.connections[name] then
             break
         end
  
@@ -93,23 +93,23 @@ function keepalive_process(name)
             concurrent._scheduler.sleep(diff)
         end
     end
-    disconnect(name)
+    _network.disconnect(name)
 end
 
 -- Handles echo requests by sending back an echo reply. 
-function controller_echo(msg)
+function _network.controller_echo(msg)
     concurrent.send({ msg.from.pid, msg.from.node }, 'ECHO')
 end
 
 -- Handles handshake messages by making use of the the information the
 -- connecting node sent, information like other known nodes and registered
 -- process names.
-function controller_hello(msg)
-    connect(msg.from.node)
+function _network.controller_hello(msg)
+    _network.connect(msg.from.node)
     if concurrent.getoption('connectall') then
         for _, v in ipairs(msg.nodes) do
             if v ~= concurrent.node() then
-                connect(v)
+                _network.connect(v)
             end
         end
         for k, v in pairs(msg.names) do
@@ -123,27 +123,27 @@ function controller_hello(msg)
 end
 
 -- Disconnects from a node.
-function disconnect(url)
-    if not connections[url] then
+function _network.disconnect(url)
+    if not _network.connections[url] then
         return
     end
-    connections[url]:shutdown('both')
-    connections[url] = nil
+    _network.connections[url]:shutdown('both')
+    _network.connections[url] = nil
 
-    for _, v in ipairs(onfailure) do
+    for _, v in ipairs(_network.onfailure) do
         v(url)
     end
 end
 
 -- Handles bye messages by closing the connection to the source node. 
-function controller_bye(msg)
-    disconnect(msg.from)
+function _network.controller_bye(msg)
+    _network.disconnect(msg.from)
 end
 
 -- Main socket handler for any incoming data, that waits for any data, checks
 -- if the they are prefixed with the correct magic cookie and then deserializes
 -- the message and forwards it to its recipient.
-function handler(socket)
+function _network.handler(socket)
     local s = copas.wrap(socket)
     while true do
         local data = s:receive()
@@ -178,17 +178,17 @@ end
 
 -- Checks for and handles messages sent to the node itself based on any
 -- controllers that have been defined.
-function controller()
+function _network.controller()
     while #concurrent._message.mailboxes[-1] > 0 do
         local msg = table.remove(concurrent._message.mailboxes[-1], 1)
-        if controllers[msg.subject] then
-            controllers[msg.subject](msg)
+        if _network.controllers[msg.subject] then
+            _network.controllers[msg.subject](msg)
         end
     end
 end
 
 -- Returns the fully qualified domain name of the calling node.
-function getfqdn()
+function _network.getfqdn()
     local hostname = socket.dns.gethostname()
     local _, resolver = socket.dns.toip(hostname)
     local fqdn
@@ -202,29 +202,29 @@ function getfqdn()
 end
 
 -- Returns the short name of the calling node.
-function gethost()
+function _network.gethost()
      return socket.dns.gethostname()
 end
 
 -- Returns the node's name along with the fully qualified domain name.
-function hostname(node)
-    return dispatcher(node .. '@' .. getfqdn())
+function _network.hostname(node)
+    return _network.dispatcher(node .. '@' .. _network.getfqdn())
 end
 
 -- Returns the node's name along with the short name.
-function shortname(node)
-    return dispatcher(node .. '@' .. gethost())
+function _network.shortname(node)
+    return _network.dispatcher(node .. '@' .. _network.gethost())
 end
 
 -- Initializes a node.
-function init(node)
+function _network.init(node)
     if string.find(node, '@') then
-        return dispatcher(node)
+        return _network.dispatcher(node)
     else
         if concurrent.getoption('shortnames') then
-            return shortname(node)
+            return _network.shortname(node)
         else
-            return hostname(node)
+            return _network.hostname(node)
         end
     end
 end
@@ -235,7 +235,7 @@ end
 -- node's name, converts registered names to distributed form and adds a
 -- handler for any incoming data.  Returns true if successful or false
 -- otherwise.
-function dispatcher(name)
+function _network.dispatcher(name)
     local node, host = string.match(name, '^(%a[%w_]*)@(.+)$')
 
     local server = socket.bind('*', 0)
@@ -259,15 +259,15 @@ function dispatcher(name)
     end
     client:shutdown('both')
 
-    nodename = name
+    _network.nodename = name
 
     for n, p in pairs(concurrent._register.names) do
         if type(p) == 'number' then
-            concurrent._register.names[n] = { p, nodename }
+            concurrent._register.names[n] = { p, _network.nodename }
         end
     end
 
-    copas.addserver(server, handler)
+    copas.addserver(server, _network.handler)
 
     return true
 end
@@ -275,7 +275,7 @@ end
 -- Shuts down a node by unregistering the node's listening port from the port
 -- mapper daemon, by closing all of its active connections to other nodes, and
 -- converting the registered names to local form.
-function shutdown()
+function _network.shutdown()
     if not concurrent.node() then
         return true
     end
@@ -287,10 +287,10 @@ function shutdown()
     client:send('- ' .. concurrent.node() .. '\r\n')
     client:shutdown('both')
 
-    for k, _ in pairs(connections) do
+    for k, _ in pairs(_network.connections) do
         concurrent.send({ -1, k }, { subject = 'BYE',
             from = concurrent.node() })
-        disconnect(k)
+        _network.disconnect(k)
     end
 
     for n, pid in pairs(concurrent._register.names) do
@@ -300,15 +300,17 @@ function shutdown()
         end
     end
 
-    nodename = nil
+    _network.nodename = nil
 
     return true
 end
 
 -- Controllers to handle messages between the nodes. 
-controllers['HELLO'] = controller_hello
-controllers['ECHO'] = controller_echo
-controllers['BYE'] = controller_bye
+_network.controllers['HELLO'] = _network.controller_hello
+_network.controllers['ECHO'] = _network.controller_echo
+_network.controllers['BYE'] = _network.controller_bye
 
-concurrent.init = init
-concurrent.shutdown = shutdown
+concurrent.init = _network.init
+concurrent.shutdown = _network.shutdown
+
+return _network

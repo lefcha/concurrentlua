@@ -1,19 +1,21 @@
 -- Submodule for setting the magic cookie.
-module('concurrent._distributed._cookie', package.seeall)
+local _cookie = {}
 
-cookie = nil                    -- The magic cookie used for authentication.
+_cookie.cookie = nil            -- The magic cookie used for authentication.
 
 -- Sets the magic cookie.
-function setcookie(c)
+function _cookie.setcookie(c)
     if concurrent.node() then
-        cookie = c
+        _cookie.cookie = c
     end
 end
 
 -- Returns the set magic cookie.
-function getcookie()
-    return cookie
+function _cookie.getcookie()
+    return _cookie.cookie
 end
 
-concurrent.setcookie = setcookie
-concurrent.getcookie = getcookie
+concurrent.setcookie = _cookie.setcookie
+concurrent.getcookie = _cookie.getcookie
+
+return _cookie

@@ -1,18 +1,18 @@
 -- Submodule for sending messages to remote processes.
-module('concurrent._distributed._message', package.seeall)
-
 require 'mime'
 
+local _message = {}
+
 -- The existing version of this function for message sending is renamed.
-_send = concurrent._message.send
+_message._send = concurrent._message.send
 
 -- Sends a message to local or remote processes.  If the process is local the
 -- old renamed version of this function is used, otherwise the message is send
 -- through the network.  The message is serialized and the magic cookie is also
 -- attached before sent.  Returns true for success and false otherwise.
-function send(dest, mesg)
+function _message.send(dest, mesg)
     if type(dest) ~= 'table' then
-        return _send(concurrent.whereis(dest), mesg)
+        return _message._send(concurrent.whereis(dest), mesg)
     end
 
     local pid, node = unpack(dest)
@@ -24,9 +24,9 @@ function send(dest, mesg)
     local data
     if concurrent.getcookie() then
         data = concurrent.getcookie() .. ' ' .. tostring(pid) .. ' ' ..
-            serialize(mesg) .. '\r\n'
+            _message.serialize(mesg) .. '\r\n'
     else 
-        data = tostring(pid) .. ' ' .. serialize(mesg) .. '\r\n'
+        data = tostring(pid) .. ' ' .. _message.serialize(mesg) .. '\r\n'
     end
     local total = #data
     repeat 
@@ -45,7 +45,7 @@ end
 
 -- Serializes an object that can be any of: nil, boolean, number, string, table,
 -- function.  Returns the serialized object.
-function serialize(obj)
+function _message.serialize(obj)
     local t = type(obj)
     if t == 'nil' or t == 'boolean' or t == 'number' then
         return tostring(obj)
@@ -58,9 +58,11 @@ function serialize(obj)
         local t = '{'
         for k, v in pairs(obj) do
             if type(k) == 'number' or type(k) == 'boolean' then
-                t = t .. ' [' .. tostring(k) .. '] = ' .. serialize(v) .. ','
+                t = t .. ' [' .. tostring(k) .. '] = ' ..
+                    _message.serialize(v) .. ','
             else
-                t = t .. ' ["' .. tostring(k) .. '"] = ' .. serialize(v) .. ','
+                t = t .. ' ["' .. tostring(k) .. '"] = ' ..
+                    _message.serialize(v) .. ','
             end
         end
         t =  t .. ' }'
@@ -70,4 +72,6 @@ function serialize(obj)
     end
 end
 
-concurrent.send = send
+concurrent.send = _message.send
+
+return _message

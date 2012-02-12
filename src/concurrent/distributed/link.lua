@@ -1,18 +1,19 @@
 -- Submodule for linking between distributed processes.
-module('concurrent._distributed._link', package.seeall)
+local _link = {}
 
 -- The existing versions of the linking related functions are renamed.
-_link = concurrent._link.link
-_unlink = concurrent._link.unlink
-_signal = concurrent._link.signal
+_link._link = concurrent._link.link
+_link._spawnlink = concurrent._link.spawnlink
+_link._unlink = concurrent._link.unlink
+_link._signal = concurrent._link.signal
 
 -- Links the calling process with the specified process.  If the destination
 -- process is local the old renamed version of the function is called, otherwise
 -- a linking request is sent to the node where the destination process is
 -- executing under.
-function link(dest)
+function _link.link(dest)
     if type(dest) ~= 'table' then
-        return _link(concurrent.whereis(dest))
+        return _link._link(concurrent.whereis(dest))
     end
 
     local links = concurrent._link.links
@@ -32,7 +33,7 @@ function link(dest)
 end
 
 -- Handles linking requests from a remote process.
-function controller_link(msg)
+function _link.controller_link(msg)
     local links = concurrent._link.links
     local pid = concurrent.whereis(msg.to.pid)
     if not pid then
@@ -52,7 +53,7 @@ end
 
 -- Creates a process either local or remote which is also linked to the calling
 -- process.
-function spawnlink(...)
+function _link.spawnlink(...)
     local pid, errmsg = concurrent.spawn(...)
     if not pid then
         return nil, errmsg
@@ -65,9 +66,9 @@ end
 -- process is local the old renamed version of the function is called, otherwise
 -- an unlinking request is sent to the node where the destination process is
 -- executing under.
-function unlink(dest)
+function _link.unlink(dest)
     if type(dest) ~= 'table' then
-        return _unlink(concurrent.whereis(dest))
+        return _link._unlink(concurrent.whereis(dest))
     end
 
     local links = concurrent._link.links
@@ -86,7 +87,7 @@ function unlink(dest)
 end
 
 -- Handles unlinking requests from a remote process. 
-function controller_unlink(msg)
+function _link.controller_unlink(msg)
     local links = concurrent._link.links
     local pid = concurrent.whereis(msg.to.pid)
     if not pid then
@@ -105,19 +106,19 @@ end
 
 -- Signals all processes that are linked to processes in and node to which the
 -- connection is lost.
-function signal_all(deadnode)
+function _link.signal_all(deadnode)
     for k, v in pairs(concurrent._link.links) do
        if v[2] == deadnode then
-           signal(k, v, 'noconnection')
+           _link.signal(k, v, 'noconnection')
        end
     end
 end
 
 -- Signals a single process that is linked to processes in a node to which the
 -- connection is lost.
-function signal(dest, dead, reason)
+function _link.signal(dest, dead, reason)
     if type(dest) ~= 'table' then
-        return _signal(concurrent.whereis(dest), dead, reason)
+        return _link._signal(concurrent.whereis(dest), dead, reason)
     end
 
     local pid, node = unpack(dest)
@@ -126,7 +127,7 @@ function signal(dest, dead, reason)
 end
 
 -- Handles exit requests from distributed processes.
-function controller_exit(msg)
+function _link.controller_exit(msg)
     if not concurrent.getoption('trapexit') then
         concurrent._process.kill(concurrent.whereis(msg.to.pid), msg.reason)
     else
@@ -136,14 +137,17 @@ function controller_exit(msg)
 end
 
 -- Controllers to handle link, unlink and exit requests.
-concurrent._distributed._network.controllers['LINK'] = controller_link
-concurrent._distributed._network.controllers['UNLINK'] = controller_unlink
-concurrent._distributed._network.controllers['EXIT'] = controller_exit
+concurrent._distributed._network.controllers['LINK'] = _link.controller_link
+concurrent._distributed._network.controllers['UNLINK'] = _link.controller_unlink
+concurrent._distributed._network.controllers['EXIT'] = _link.controller_exit
 
 -- Signals all processes linked to processes in a node to which the connection
 -- is lost.
-table.insert(concurrent._distributed._network.onfailure, signal_all)
+table.insert(concurrent._distributed._network.onfailure, _link.signal_all)
 
-concurrent.link = link
-concurrent.unlink = unlink
-concurrent._link.signal = signal
+concurrent.link = _link.link
+concurrent.spawnlink = _link.spawnlink
+concurrent.unlink = _link.unlink
+concurrent._link.signal = _link.signal
+
+return _link

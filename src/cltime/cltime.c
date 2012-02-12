@@ -69,7 +69,7 @@ cltime_sleep(lua_State *L)
 }
 
 /* The cltime library. */
-static const luaL_reg lib[] = {
+static const luaL_Reg lib[] = {
 	{ "time", cltime_time },
 	{ "sleep", cltime_sleep },
 	{ NULL, NULL }
@@ -82,7 +82,11 @@ LUALIB_API int
 luaopen_cltime(lua_State *lua)
 {
 
-	luaL_openlib(lua, "cltime", lib, 0);
-
+#if LUA_VERSION_NUM < 502
+	luaL_register(lua, "cltime", lib);
+#else
+	luaL_newlib(lua, lib);
+	lua_setglobal(lua, "cldaemon");
+#endif
 	return 1;
 }

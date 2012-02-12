@@ -1,12 +1,12 @@
 -- Submodule for scheduling processes.
-module('concurrent._scheduler', package.seeall)
-
 require 'cltime'
 
-timeouts = {}                   -- Timeouts for processes that are suspended. 
-barriers = {}                   -- Barriers for blocked processes.
+local _scheduler = {}
 
-stop = false                    -- Flag to interrupt the scheduler.
+_scheduler.timeouts = {}        -- Timeouts for processes that are suspended. 
+_scheduler.barriers = {}        -- Barriers for blocked processes.
+
+_scheduler.stop = false         -- Flag to interrupt the scheduler.
 
 concurrent._option.options.tick = 10    -- Scheduler clock time advances.
 
@@ -14,20 +14,20 @@ concurrent._option.options.tick = 10    -- Scheduler clock time advances.
 -- longer blocked and then resumes processes that are waiting for a message and
 -- one has arrived.  If all processes are dead, it instructs the scheduler loop
 -- about it.
-function step(timeout)
-    for k, v in pairs(barriers) do
+function _scheduler.step(timeout)
+    for k, v in pairs(_scheduler.barriers) do
         if v then
             concurrent._process.resume(concurrent._process.processes[k])
         end
     end
 
     for k, v in pairs(concurrent._process.processes) do
-        if #concurrent._message.mailboxes[k] > 0 or (timeouts[k] and
-            cltime.time() - timeouts[k] >= 0) then
-            if timeouts[k] then
-                timeouts[k] = nil
+        if #concurrent._message.mailboxes[k] > 0 or (_scheduler.timeouts[k] and
+            cltime.time() - _scheduler.timeouts[k] >= 0) then
+            if _scheduler.timeouts[k] then
+                _scheduler.timeouts[k] = nil
             end
-            if type(barriers[k]) == 'nil' then
+            if type(_scheduler.barriers[k]) == 'nil' then
                 concurrent._process.resume(v)
             end
         end
@@ -49,75 +49,78 @@ function step(timeout)
 end
 
 -- Advances the system clock by a tick.
-function tick()
+function _scheduler.tick()
     cltime.sleep(concurrent.getoption('tick'))
 end
 
 -- Infinite or finite loop of the scheduler. Continuesly performs a scheduler
 -- step and advances the system clock by a tick. Checks for scheduler interrupts
 -- or for a hint in case all processes are dead.
-function loop(timeout)
+function _scheduler.loop(timeout)
     if timeout then
         local timer = cltime.time() + timeout
-        while step(timeout) and not stop and timer > cltime.time() do
-            tick()
+        while _scheduler.step(timeout) and not _scheduler.stop and
+            timer > cltime.time() do
+            _scheduler.tick()
         end
     else
-        while step(timeout) and not stop do
-            tick()
+        while _scheduler.step(timeout) and not _scheduler.stop do
+            _scheduler.tick()
         end
     end
-    stop = false
+    _scheduler.stop = false
 end
 
 -- Raises the flag to cause a scheduler interrupt.
-function interrupt()
-    stop = true
+function _scheduler.interrupt()
+    _scheduler.stop = true
 end
 
 -- Sets a barrier for the calling process.
-function wait()
+function _scheduler.wait()
     local s = concurrent.self()
-    if not barriers[s] then
-        barriers[s] = false
-        wait_yield()
+    if not _scheduler.barriers[s] then
+        _scheduler.barriers[s] = false
+        _scheduler.wait_yield()
     end
-    r = barriers[s]
-    barriers[s] = nil
+    r = _scheduler.barriers[s]
+    _scheduler.barriers[s] = nil
     return r
 end
 
 -- Actions to be performed during a wait yield.
-function wait_yield()
-    yield()
+function _scheduler.wait_yield()
+    _scheduler.yield()
 end
 
 -- Sets a sleep timeout for the calling process.
-function sleep(timeout)
+function _scheduler.sleep(timeout)
     local s = concurrent.self()
     if timeout then
-        timeouts[s] = cltime.time() + timeout
+        _scheduler.timeouts[s] = cltime.time() + timeout
     end
-    sleep_yield()
+    _scheduler.sleep_yield()
     if timeout then
-        timeouts[s] = nil
+        _scheduler.timeouts[s] = nil
     end
 end
 
 -- Actions to be performed during a sleep yield.
-function sleep_yield()
-    yield()
+function _scheduler.sleep_yield()
+    _scheduler.yield()
 end
 
 -- Yields a process , but first checks if the process is exiting intentionally.
-function yield()
+function _scheduler.yield()
     if coroutine.yield() == 'EXIT' then
         error('EXIT', 0)
     end
 end
 
-concurrent.step = step
-concurrent.tick = tick
-concurrent.loop = loop
-concurrent.interrupt = interrupt
-concurrent.sleep = sleep
+concurrent.step = _scheduler.step
+concurrent.tick = _scheduler.tick
+concurrent.loop = _scheduler.loop
+concurrent.interrupt = _scheduler.interrupt
+concurrent.sleep = _scheduler.sleep
+
+return _scheduler

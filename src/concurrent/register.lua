@@ -1,30 +1,30 @@
 -- Submodule for process name registering.
-module('concurrent._register', package.seeall)
+local _register = {}
 
-names = {}                      -- Process names and PIDs associative table.
+_register.names = {}            -- Process names and PIDs associative table.
 
 -- Registers a PID with the specified name.  Returns true if successful or false
 -- otherwise.
-function register(name, pid)
-    if whereis(name) then
+function _register.register(name, pid)
+    if _register.whereis(name) then
         return false
     end
     if not pid then
         pid = concurrent.self()
     end
-    names[name] = pid
+    _register.names[name] = pid
     return true
 end
 
 -- Unregisters the specified process name.  Returns true if successful or
 -- false otherwise.
-function unregister(name)
+function _register.unregister(name)
     if not name then
         name = concurrent.self()
     end
-    for k, v in pairs(names) do
+    for k, v in pairs(_register.names) do
         if name == k or name == v then
-            names[k] = nil
+            _register.names[k] = nil
             return true
         end
     end
@@ -32,30 +32,32 @@ function unregister(name)
 end
 
 -- Returns a table with the names of all the registered processes.
-function registered()
+function _register.registered()
     local n = {}
-    for k, _ in pairs(names) do
+    for k, _ in pairs(_register.names) do
         table.insert(n, k)
     end
     return n
 end
 
 -- Returns the PID of the process specified by its registered name.
-function whereis(name)
+function _register.whereis(name)
     if type(name) == 'number' then
         return name
     end
-    if not names[name] then
+    if not _register.names[name] then
         return
     end
-    return names[name]
+    return _register.names[name]
 end
 
 -- Terminated or aborted processes should not be registered anymore.
-table.insert(concurrent._process.ondeath, unregister)
-table.insert(concurrent._process.ondestruction, unregister)
+table.insert(concurrent._process.ondeath, _register.unregister)
+table.insert(concurrent._process.ondestruction, _register.unregister)
 
-concurrent.register = register
-concurrent.unregister = unregister
-concurrent.registered = registered
-concurrent.whereis = whereis
+concurrent.register = _register.register
+concurrent.unregister = _register.unregister
+concurrent.registered = _register.registered
+concurrent.whereis = _register.whereis
+
+return _register

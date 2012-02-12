@@ -3,8 +3,7 @@ PREFIX = /usr/local
 SHAREDIR = $(PREFIX)/share/lua/5.1
 SHAREMODDIR = $(SHAREDIR)/concurrent/distributed
 
-SHARE = init.lua \
-	network.lua \
+SHARE = network.lua \
 	node.lua \
 	cookie.lua \
 	process.lua \

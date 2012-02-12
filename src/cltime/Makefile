@@ -2,15 +2,8 @@ DESTDIR =
 PREFIX = /usr/local
 LIBDIR = $(PREFIX)/lib/lua/5.1
 
-INCDIRS = -I/usr/local/include
-LIBDIRS = -L/usr/local/lib
-
-MYCFLAGS = -Wall -g -fpic
-MYLDFLAGS = -shared
-
-CFLAGS = $(MYCFLAGS) $(INCDIRS)
-LDFLAGS = $(MYLDFLAGS) $(LIBDIRS)
-
+CFLAGS = -Wall -g -fpic
+LDFLAGS = -shared
 LIBS = -llua
 
 LIB = cltime.so
