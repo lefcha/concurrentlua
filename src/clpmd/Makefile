@@ -9,12 +9,9 @@ all: $(BIN)
 $(BIN):
 
 install: all
-	if test ! -d $(DESTDIR)$(BINDIR); \
-		then mkdir -p $(DESTDIR)$(BINDIR); \
-	fi
+	mkdir -p $(DESTDIR)$(BINDIR) && \
 	cp -f $(BIN) $(DESTDIR)$(BINDIR) && \
-		cd $(DESTDIR)$(BINDIR) && \
-		chmod 0755 $(BIN)
+	chmod 0755 $(DESTDIR)$(BINDIR)/$(BIN)
 
 uninstall:
 	cd $(DESTDIR)$(BINDIR) && \

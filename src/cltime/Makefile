@@ -1,10 +1,21 @@
 DESTDIR = 
 PREFIX = /usr/local
-LIBDIR = $(PREFIX)/lib/lua/5.1
+LIBDIR = $(PREFIX)/lib/lua/$(LUAVERSION)
 
-CFLAGS = -Wall -g -fpic
-LDFLAGS = -shared
-LIBS = -llua
+LUAVERSION = 5.1
+
+MYCFLAGS =
+MYLDFLAGS =
+MYLIBS =
+
+INCDIRS =
+LIBDIRS =
+
+LIBLUA = -llua
+
+CFLAGS = -Wall -O -fpic $(INCDIRS) $(MYCFLAGS)
+LDFLAGS = -shared -fpic $(LIBDIRS) $(MYLDFLAGS)
+LIBS = $(LIBLUA) $(MYLIBS)
 
 LIB = cltime.so
 OBJ = cltime.o
@@ -17,9 +28,7 @@ $(LIB): $(OBJ)
 $(OBJ):
 
 install: all
-	if test ! -d $(DESTDIR)$(LIBDIR); \
-		then mkdir -p $(DESTDIR)$(LIBDIR); \
-	fi
+	mkdir -p $(DESTDIR)$(LIBDIR) && \
 	cp -f $(LIB) $(DESTDIR)$(LIBDIR)/$(LIB) && \
 	chmod 0755 $(DESTDIR)$(LIBDIR)/$(LIB)
 
