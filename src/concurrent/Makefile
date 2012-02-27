@@ -1,7 +1,7 @@
 DESTDIR = 
 PREFIX = /usr/local
 SHAREDIR = $(PREFIX)/share/lua/$(LUAVERSION)
-SHAREMODDIR = $(SHAREDIR)/concurrent
+MODDIR = $(SHAREDIR)/concurrent
 
 LUAVERSION = 5.1
 
@@ -19,14 +19,14 @@ all: $(SHARE)
 
 $(SHARE):
 
-install:
-	mkdir -p $(DESTDIR)$(SHAREMODDIR) && \
-	cp -f $(SHARE) $(DESTDIR)$(SHAREMODDIR) && \
-	chmod 0644 $(DESTDIR)$(SHAREMODDIR)/$(SHARE)
+install: $(SHARE)
+	mkdir -p $(DESTDIR)$(MODDIR) && \
+	cp -f $(SHARE) $(DESTDIR)$(MODDIR) && \
+	chmod 0644 $(DESTDIR)$(MODDIR)/$(SHARE)
 	cd distributed && $(MAKE) install
 
 uninstall:
-	cd $(DESTDIR)$(SHAREMODDIR) && \
+	cd $(DESTDIR)$(MODDIR) && \
 	rm -f $(SHARE)
 	cd distributed && $(MAKE) uninstall
 
