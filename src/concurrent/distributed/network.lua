@@ -2,7 +2,7 @@
 require 'socket'
 require 'copas'
 require 'mime'
-require 'cltime'
+require 'concurrent.time'
 
 local _network = {}
 
@@ -72,7 +72,7 @@ function _network.keepalive_process(name)
     local timeout = concurrent.getoption('keepalivetimeout')
 
     while true do
-        local timer = cltime.time() + timeout
+        local timer = time.time() + timeout
 
         if not _network.connections[name] then
             break
@@ -88,7 +88,7 @@ function _network.keepalive_process(name)
             break
         end
 
-        local diff = timer - cltime.time()
+        local diff = timer - time.time()
         if diff > 0 then
             concurrent._scheduler.sleep(diff)
         end

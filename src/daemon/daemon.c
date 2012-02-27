@@ -17,7 +17,7 @@
  * a daemon.
  */
 static int
-cldaemon_daemon(lua_State *lua)
+daemon_daemon(lua_State *lua)
 {
 
 #ifndef _WIN32
@@ -56,24 +56,24 @@ cldaemon_daemon(lua_State *lua)
 	return 0;
 }
 
-/* The cldaemon library. */
+/* The daemon library. */
 static const luaL_Reg lib[] = {
-	{ "daemon", cldaemon_daemon },
+	{ "daemon", daemon_daemon },
 	{ NULL, NULL }
 };
 
 /*
- * Opens the cldaemon library.
+ * Opens the daemon library.
  */
 LUALIB_API int
-luaopen_cldaemon(lua_State *lua)
+luaopen_concurrent_daemon(lua_State *lua)
 {
 
 #if LUA_VERSION_NUM < 502
-	luaL_register(lua, "cldaemon", lib);
+	luaL_register(lua, "daemon", lib);
 #else
 	luaL_newlib(lua, lib);
-	lua_setglobal(lua, "cldaemon");
+	lua_setglobal(lua, "daemon");
 #endif
 	return 1;
 }

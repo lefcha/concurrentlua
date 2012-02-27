@@ -3,7 +3,7 @@
 require 'socket'
 require 'copas'
 
-require 'cldaemon'
+require 'concurrent.daemon'
 
 database = {}
 
@@ -54,7 +54,7 @@ function handler(socket)
     end
 end
 
-cldaemon.daemon()
+daemon.daemon()
 
 copas.addserver(server, handler)
 copas.loop()

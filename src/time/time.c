@@ -14,7 +14,7 @@
  * Returns the time elapsed since the epoch in milliseconds.
  */
 static int
-cltime_time(lua_State *L)
+time_time(lua_State *L)
 {
 #ifdef _WIN32
 	SYSTEMTIME st, est;
@@ -54,7 +54,7 @@ cltime_time(lua_State *L)
  * Delays for the specified amount of time in milliseconds.
  */
 static int
-cltime_sleep(lua_State *L)
+time_sleep(lua_State *L)
 {
 
 #ifdef _WIN32
@@ -68,25 +68,25 @@ cltime_sleep(lua_State *L)
 	return 0;
 }
 
-/* The cltime library. */
+/* The time library. */
 static const luaL_Reg lib[] = {
-	{ "time", cltime_time },
-	{ "sleep", cltime_sleep },
+	{ "time", time_time },
+	{ "sleep", time_sleep },
 	{ NULL, NULL }
 };
 
 /*
- * Opens the cltime library.
+ * Opens the time library.
  */
 LUALIB_API int
-luaopen_cltime(lua_State *lua)
+luaopen_concurrent_time(lua_State *lua)
 {
 
 #if LUA_VERSION_NUM < 502
-	luaL_register(lua, "cltime", lib);
+	luaL_register(lua, "time", lib);
 #else
 	luaL_newlib(lua, lib);
-	lua_setglobal(lua, "cldaemon");
+	lua_setglobal(lua, "time");
 #endif
 	return 1;
 }

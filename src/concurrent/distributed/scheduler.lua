@@ -1,7 +1,7 @@
 -- Submodule for the scheduling of processes in a distributed node. 
 require 'socket'
 require 'copas'
-require 'cltime'
+require 'concurrent.time'
 
 local _scheduler = {}
 
@@ -34,9 +34,9 @@ function _scheduler.loop(timeout)
         return _scheduler._loop(timeout)
     end
     if timeout then
-        local timer = cltime.time() + timeout
+        local timer = time.time() + timeout
         while _scheduler.step(timeout) and concurrent.node() and
-            not concurrent._scheduler.stop and timer > cltime.time() do
+            not concurrent._scheduler.stop and timer > time.time() do
             _scheduler.tick()
         end
     else

@@ -1,4 +1,6 @@
 -- Submodule for emulating the control of a script as a process.
+require 'concurrent.time'
+
 _root = {}
 
 concurrent._process.processes[0] = 0    -- Root process has PID of 0. 
@@ -54,7 +56,7 @@ function _root.sleep_yield()
         if #mailboxes[s] > 0 then
             break
         end
-        if timeouts[s] and cltime.time() - timeouts[s] >= 0 then
+        if timeouts[s] and time.time() - timeouts[s] >= 0 then
             timeouts[s] = nil
             return
         end

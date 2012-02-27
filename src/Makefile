@@ -1,5 +1,5 @@
 all install uninstall clean:
-	cd cltime && $(MAKE) $@
+	cd time && $(MAKE) $@
 	cd concurrent && $(MAKE) $@
-	cd cldaemon && $(MAKE) $@
+	cd daemon && $(MAKE) $@
 	cd clpmd && $(MAKE) $@

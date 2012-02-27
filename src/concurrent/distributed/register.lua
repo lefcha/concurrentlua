@@ -1,5 +1,5 @@
 -- Submodule for process name registering in distributed mode.
-require 'cltime'
+require 'concurrent.time'
 
 local _register = {}
 
@@ -67,14 +67,14 @@ function _register.register_process(parent, name, pid)
     end
 
     local i = 0
-    local timer = cltime.time() + concurrent.getoption('registertimeout')
+    local timer = time.time() + concurrent.getoption('registertimeout')
     repeat
-        local msg = concurrent.receive(timer - cltime.time())
+        local msg = concurrent.receive(timer - time.time())
         if msg and msg.phase == 'LOCK' then
             locks[msg.from.node] = true
             i = i + 1
         end
-    until cltime.time() >= timer or i >= n
+    until time.time() >= timer or i >= n
 
     for _, v in pairs(locks) do
         if not v then
@@ -90,14 +90,14 @@ function _register.register_process(parent, name, pid)
     end
 
     local i = 0
-    local timer = cltime.time() + concurrent.getoption('registertimeout')
+    local timer = time.time() + concurrent.getoption('registertimeout')
     repeat
-        local msg = concurrent.receive(timer - cltime.time())
+        local msg = concurrent.receive(timer - time.time())
         if msg and msg.phase == 'COMMIT' then
             commits[msg.from.node] = true
             i = i + 1
         end
-    until cltime.time() >= timer or i >= n
+    until time.time() >= timer or i >= n
 
     for _, v in pairs(commits) do
         if not v then
@@ -114,10 +114,10 @@ function _register.controller_register(msg)
     if msg.phase == 'LOCK' then
         if not concurrent.whereis(msg.name) and not
             _register.nameslocks[msg.name] or
-            cltime.time() - _register.nameslocks[msg.name]['stamp'] <
+            time.time() - _register.nameslocks[msg.name]['stamp'] <
             concurrent.getoption('registerlocktimeout') then
             _register.nameslocks[msg.name] = { pid = msg.pid, node = msg.node,
-                stamp = cltime.time() }
+                stamp = time.time() }
             concurrent.send({ msg.from.pid, msg.from.node }, { phase = 'LOCK',
                 from = { node = concurrent.node() } })
         end
@@ -181,14 +181,14 @@ function _register.unregister_process(parent, name)
     end
 
     local i = 0
-    local timer = cltime.time() + concurrent.getoption('registertimeout')
+    local timer = time.time() + concurrent.getoption('registertimeout')
     repeat
-        local msg = concurrent.receive(timer - cltime.time())
+        local msg = concurrent.receive(timer - time.time())
         if msg and msg.phase == 'LOCK' then
             locks[msg.from.node] = true
             i = i + 1
         end
-    until cltime.time() > timer or i >= n
+    until time.time() > timer or i >= n
 
     for _, v in pairs(locks) do
         if not v then
@@ -204,14 +204,14 @@ function _register.unregister_process(parent, name)
     end
 
     local i = 0
-    local timer = cltime.time() + concurrent.getoption('registertimeout')
+    local timer = time.time() + concurrent.getoption('registertimeout')
     repeat
-        local msg = concurrent.receive(timer - cltime.time())
+        local msg = concurrent.receive(timer - time.time())
         if msg and msg.phase == 'COMMIT' then
             commits[msg.from.node] = true
             i = i + 1
         end
-    until cltime.time() > timer or i >= n
+    until time.time() > timer or i >= n
 
     for _, v in pairs(commits) do
         if not v then
@@ -228,10 +228,10 @@ function _register.controller_unregister(msg)
     if msg.phase == 'LOCK' then
         if concurrent.whereis(msg.name) and not
             _register.nameslocks[msg.name] or
-            cltime.time() - _register.nameslocks[msg.name]['stamp'] <
+            time.time() - _register.nameslocks[msg.name]['stamp'] <
             concurrent.getoption('registerlocktimeout') then
             _register.nameslocks[msg.name] = { pid = msg.pid, node = msg.node,
-                stamp = cltime.time() }
+                stamp = time.time() }
             concurrent.send({ msg.from.pid, msg.from.node }, { phase = 'LOCK',
                 from = { node = concurrent.node() } })
         end

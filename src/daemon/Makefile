@@ -1,6 +1,6 @@
 DESTDIR = 
 PREFIX = /usr/local
-LIBDIR = $(PREFIX)/lib/lua/$(LUAVERSION)
+LIBDIR = $(PREFIX)/lib/lua/$(LUAVERSION)/concurrent
 
 LUAVERSION = 5.1
 
@@ -17,8 +17,8 @@ CFLAGS = -Wall -O -fpic $(INCDIRS) $(MYCFLAGS)
 LDFLAGS = -shared -fpic $(LIBDIRS) $(MYLDFLAGS)
 LIBS = $(LIBLUA) $(MYLIBS)
 
-LIB = cldaemon.so
-OBJ = cldaemon.o
+LIB = daemon.so
+OBJ = daemon.o
 
 all: $(LIB)
 

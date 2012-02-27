@@ -1,5 +1,5 @@
 -- Submodule for scheduling processes.
-require 'cltime'
+require 'concurrent.time'
 
 local _scheduler = {}
 
@@ -23,7 +23,7 @@ function _scheduler.step(timeout)
 
     for k, v in pairs(concurrent._process.processes) do
         if #concurrent._message.mailboxes[k] > 0 or (_scheduler.timeouts[k] and
-            cltime.time() - _scheduler.timeouts[k] >= 0) then
+            time.time() - _scheduler.timeouts[k] >= 0) then
             if _scheduler.timeouts[k] then
                 _scheduler.timeouts[k] = nil
             end
@@ -50,7 +50,7 @@ end
 
 -- Advances the system clock by a tick.
 function _scheduler.tick()
-    cltime.sleep(concurrent.getoption('tick'))
+    time.sleep(concurrent.getoption('tick'))
 end
 
 -- Infinite or finite loop of the scheduler. Continuesly performs a scheduler
@@ -58,9 +58,9 @@ end
 -- or for a hint in case all processes are dead.
 function _scheduler.loop(timeout)
     if timeout then
-        local timer = cltime.time() + timeout
+        local timer = time.time() + timeout
         while _scheduler.step(timeout) and not _scheduler.stop and
-            timer > cltime.time() do
+            timer > time.time() do
             _scheduler.tick()
         end
     else
@@ -97,7 +97,7 @@ end
 function _scheduler.sleep(timeout)
     local s = concurrent.self()
     if timeout then
-        _scheduler.timeouts[s] = cltime.time() + timeout
+        _scheduler.timeouts[s] = time.time() + timeout
     end
     _scheduler.sleep_yield()
     if timeout then

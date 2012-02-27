@@ -1,5 +1,5 @@
 -- Submodule for passing messages.
-require 'cltime'
+require 'concurrent.time'
 
 local _message = {}
 
@@ -22,7 +22,7 @@ function _message.receive(timeout)
     local timeouts = concurrent._scheduler.timeouts
     local s = concurrent.self()
     if type(timeout) == 'number' then
-        timeouts[s] = cltime.time() + timeout
+        timeouts[s] = time.time() + timeout
     end
     if #_message.mailboxes[s] == 0 then
         concurrent._scheduler.sleep(timeout)
