@@ -1,5 +1,5 @@
 -- Submodule for sending messages to remote processes.
-require 'mime'
+mime = require 'mime'
 
 local _message = {}
 

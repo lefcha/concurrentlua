@@ -3,7 +3,7 @@
 require 'socket'
 require 'copas'
 
-require 'concurrent.daemon'
+daemon = require 'concurrent.daemon'
 
 database = {}
 

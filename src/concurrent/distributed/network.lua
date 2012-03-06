@@ -1,8 +1,9 @@
 -- Submodule for handling all networking operations between nodes.
-require 'socket'
-require 'copas'
-require 'mime'
-require 'concurrent.time'
+socket = require 'socket'
+copas = require 'copas'
+mime = require 'mime'
+
+time = require 'concurrent.time'
 
 local _network = {}
 

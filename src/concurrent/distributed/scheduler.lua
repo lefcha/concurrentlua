@@ -1,7 +1,8 @@
 -- Submodule for the scheduling of processes in a distributed node. 
-require 'socket'
-require 'copas'
-require 'concurrent.time'
+socket = require 'socket'
+copas = require 'copas'
+
+time = require 'concurrent.time'
 
 local _scheduler = {}
 

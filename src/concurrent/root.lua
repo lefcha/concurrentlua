@@ -1,5 +1,5 @@
 -- Submodule for emulating the control of a script as a process.
-require 'concurrent.time'
+time = require 'concurrent.time'
 
 _root = {}
 

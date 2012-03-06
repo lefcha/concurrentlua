@@ -1,5 +1,5 @@
 -- Submodule for scheduling processes.
-require 'concurrent.time'
+time = require 'concurrent.time'
 
 local _scheduler = {}
 

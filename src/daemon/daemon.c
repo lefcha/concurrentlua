@@ -73,7 +73,6 @@ luaopen_concurrent_daemon(lua_State *lua)
 	luaL_register(lua, "daemon", lib);
 #else
 	luaL_newlib(lua, lib);
-	lua_setglobal(lua, "daemon");
 #endif
 	return 1;
 }

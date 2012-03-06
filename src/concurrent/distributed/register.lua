@@ -1,5 +1,5 @@
 -- Submodule for process name registering in distributed mode.
-require 'concurrent.time'
+time = require 'concurrent.time'
 
 local _register = {}
 

@@ -86,7 +86,6 @@ luaopen_concurrent_time(lua_State *lua)
 	luaL_register(lua, "time", lib);
 #else
 	luaL_newlib(lua, lib);
-	lua_setglobal(lua, "time");
 #endif
 	return 1;
 }

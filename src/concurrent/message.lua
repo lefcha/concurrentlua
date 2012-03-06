@@ -1,5 +1,5 @@
 -- Submodule for passing messages.
-require 'concurrent.time'
+time = require 'concurrent.time'
 
 local _message = {}
 
