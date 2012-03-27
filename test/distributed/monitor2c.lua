@@ -1,4 +1,4 @@
-require 'concurrent'
+concurrent = require 'concurrent'
 
 function root(pid)
     local self = concurrent.self()
@@ -6,7 +6,7 @@ function root(pid)
     concurrent.monitor(pid)
     while true do
         concurrent.send(pid, { from = { self, 'root@localhost' },
-            body = 'ping' })
+                               body = 'ping' })
         print('root sent message to internal')
 
         local msg = concurrent.receive(10)

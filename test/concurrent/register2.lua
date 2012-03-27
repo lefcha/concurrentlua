@@ -1,4 +1,4 @@
-require 'concurrent'
+concurrent = require 'concurrent'
 
 function leaf(n)
     for i = 1, n do

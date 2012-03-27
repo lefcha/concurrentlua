@@ -1,4 +1,4 @@
-require 'concurrent'
+concurrent = require 'concurrent'
 
 function leaf(n)
     concurrent.register('leaf', concurrent.self())

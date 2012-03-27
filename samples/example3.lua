@@ -1,4 +1,4 @@
-require 'concurrent'
+concurrent = require 'concurrent'
 
 function pong()
     while true do
@@ -15,19 +15,11 @@ end
 
 function ping(n)
     for i = 1, n do
-        concurrent.send('pong', {
-            from = concurrent.self(),
-            body = 'ping'
-        })
+        concurrent.send('pong', { from = concurrent.self(), body = 'ping' })
         local msg = concurrent.receive()
-        if msg.body == 'pong' then
-            print('ping received pong')
-        end
+        if msg.body == 'pong' then print('ping received pong') end
     end
-    concurrent.send('pong', {
-        from = concurrent.self(),
-        body = 'finished'
-    })
+    concurrent.send('pong', { from = concurrent.self(), body = 'finished' })
     print('ping finished')
 end
 

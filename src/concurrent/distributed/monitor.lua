@@ -1,18 +1,21 @@
 -- Submodule for monitoring of distributed processes.
-local _monitor = {}
+local monitor = require 'concurrent.monitor'
+local network = require 'concurrent.distributed.network'
+local concurrent
 
 -- The existing versions of the monitoring related functions are renamed.
-_monitor._monitor = concurrent._monitor.monitor
-_monitor._spawnmonitor = concurrent._monitor.spawnmonitor
-_monitor._demonitor = concurrent._monitor.demonitor
-_monitor._notify = concurrent._monitor.notify
+monitor._monitor = monitor.monitor
+monitor._spawnmonitor = monitor.spawnmonitor
+monitor._demonitor = monitor.demonitor
+monitor._notify = monitor.notify
 
 -- Starts monitoring the specified process.  If the destination process is local
 -- the old renamed version of the function is called, otherwise a monitor
 -- request is sent to the node where the destination process is executing under.
-function _monitor.monitor(dest)
+function monitor.monitor(dest)
+    concurrent = concurrent or require 'concurrent'
     if type(dest) ~= 'table' then
-        return _monitor._monitor(concurrent.whereis(dest))
+        return monitor._monitor(concurrent.whereis(dest))
     end
 
     local s = concurrent.self()
@@ -22,27 +25,28 @@ function _monitor.monitor(dest)
 end
 
 -- Handles monitor requests from a remote process. 
-function _monitor.controller_monitor(msg)
-    local monitors = concurrent._monitor.monitors
+function monitor.controller_monitor(msg)
+    concurrent = concurrent or require 'concurrent'
     local pid = concurrent.whereis(msg.to.pid)
     if not pid then
         return
     end
-    if type(monitors[pid]) == 'nil' then
-        monitors[pid] = {}
+    if type(monitor.monitors[pid]) == 'nil' then
+        monitor.monitors[pid] = {}
     end
-    for _, v in pairs(monitors[pid]) do
+    for _, v in pairs(monitor.monitors[pid]) do
         if type(v) == 'table' and msg.from.pid == v[1] and
             msg.from.node == v[2] then
             return
         end
     end
-    table.insert(monitors[pid], { msg.from.pid, msg.from.node })
+    table.insert(monitor.monitors[pid], { msg.from.pid, msg.from.node })
 end
 
 -- Creates a process either local or remote which is also monitored by the
 -- calling process.
-function _monitor.spawnmonitor(...)
+function monitor.spawnmonitor(...)
+    concurrent = concurrent or require 'concurrent'
     local pid, errmsg = concurrent.spawn(...)
     if not pid then
         return nil, errmsg
@@ -54,9 +58,10 @@ end
 -- Stops monitoring the specified process.  If the destination process is local
 -- the old version of the function is called, otherwise a demonitor request is
 -- sent to the node where the destination process is executing under.
-function _monitor.demonitor(dest)
+function monitor.demonitor(dest)
+    concurrent = concurrent or require 'concurrent'
     if type(dest) ~= 'table' then
-        return _monitor._demonitor(concurrent.whereis(dest))
+        return monitor._demonitor(concurrent.whereis(dest))
     end
 
     local s = concurrent.self()
@@ -66,38 +71,39 @@ function _monitor.demonitor(dest)
 end
 
 -- Handles demonitor requests from a remote process. 
-function _monitor.controller_demonitor(msg)
-    local monitors = concurrent._monitor.monitors
+function monitor.controller_demonitor(msg)
+    concurrent = concurrent or require 'concurrent'
     local pid = concurrent.whereis(msg.to.pid)
     if not pid then
         return
     end
-    if type(monitors[pid]) == 'nil' then
+    if type(monitor.monitors[pid]) == 'nil' then
         return
     end
-    for k, v in pairs(monitors[pid]) do
+    for k, v in pairs(monitor.monitors[pid]) do
         if type(v) == 'table' and msg.from.pid == v[1] and
             msg.from.node == v[2] then
-            table.remove(monitors[pid], k)
+            table.remove(monitor.monitors[pid], k)
         end
     end
 end
 
 -- Notifies all processes that are monitoring processes in a node to which the
 -- connection is lost.
-function _monitor.notify_all(deadnode)
-    for k, v in pairs(concurrent._monitor.monitors) do
+function monitor.notify_all(deadnode)
+    for k, v in pairs(monitor.monitors) do
        if v[2] == deadnode then
-           _monitor.notify(k, v, 'noconnection')
+           monitor.notify(k, v, 'noconnection')
        end
     end
 end
 
 -- Notifies a single process that is monitoring processes in and node to which
 -- the connection is lost.
-function _monitor.notify(dest, dead, reason)
+function monitor.notify(dest, dead, reason)
+    concurrent = concurrent or require 'concurrent'
     if type(dest) ~= 'table' then
-        return _monitor._notify(concurrent.whereis(dest), dead, reason)
+        return monitor._notify(concurrent.whereis(dest), dead, reason)
     end
 
     concurrent.send(dest, { signal = 'DOWN', from = { dead,
@@ -105,18 +111,11 @@ function _monitor.notify(dest, dead, reason)
 end
 
 -- Controllers to handle monitor and demonitor requests.
-concurrent._distributed._network.controllers['MONITOR'] =
-    _monitor.controller_monitor
-concurrent._distributed._network.controllers['DEMONITOR'] =
-    _monitor.controller_demonitor
+network.controllers['MONITOR'] = monitor.controller_monitor
+network.controllers['DEMONITOR'] = monitor.controller_demonitor
 
 -- Notifies all processes that are monitoring processes in a node to which the
 -- connection is lost.
-table.insert(concurrent._distributed._network.onfailure, _monitor.notify_all)
+table.insert(network.onfailure, monitor.notify_all)
 
-concurrent.monitor = _monitor.monitor
-concurrent.spawnmonitor = _monitor.spawnmonitor
-concurrent.demonitor = _monitor.demonitor
-concurrent._monitor.notify =  _monitor.notify
-
-return _monitor
+return monitor

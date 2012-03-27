@@ -1,38 +1,33 @@
 -- Submodule for passing messages.
-time = require 'concurrent.time'
+local time = require 'concurrent.time'
+local concurrent, scheduler
 
-local _message = {}
+local message = {}
 
-_message.mailboxes = {}         -- Mailboxes associated with processes.
+message.mailboxes = {}          -- Mailboxes associated with processes.
 
 -- Sends a messages to a process, actually, inserts it to the destination
 -- mailbox.  Returns true if successful and false otherwise.
-function _message.send(dest, mesg)
+function message.send(dest, mesg)
+    concurrent = concurrent or require 'concurrent'
     local pid = concurrent.whereis(dest)
-    if not pid then
-        return false
-    end
-    table.insert(_message.mailboxes[pid], mesg)
+    if not pid then return false end
+    table.insert(message.mailboxes[pid], mesg)
     return true
 end
 
 -- Receives the oldest unread message.  If the mailbox is empty, it waits until
 -- the specified timeout has expired.
-function _message.receive(timeout)
-    local timeouts = concurrent._scheduler.timeouts
+function message.receive(timeout)
+    concurrent = concurrent or require 'concurrent'
+    scheduler = scheduler or require 'concurrent.scheduler'
+    local timeouts = scheduler.timeouts
     local s = concurrent.self()
-    if type(timeout) == 'number' then
-        timeouts[s] = time.time() + timeout
-    end
-    if #_message.mailboxes[s] == 0 then
-        concurrent._scheduler.sleep(timeout)
-    end
-    if #_message.mailboxes[s] > 0 then
-        return table.remove(_message.mailboxes[s], 1)
+    if type(timeout) == 'number' then timeouts[s] = time.time() + timeout end
+    if #message.mailboxes[s] == 0 then scheduler.sleep(timeout) end
+    if #message.mailboxes[s] > 0 then
+        return table.remove(message.mailboxes[s], 1)
     end
 end
 
-concurrent.send = _message.send
-concurrent.receive = _message.receive
-
-return _message
+return message

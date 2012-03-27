@@ -1,4 +1,4 @@
-require 'concurrent'
+concurrent = require 'concurrent'
 
 function hello_world(times)
     for i = 1, times do print('hello world') end

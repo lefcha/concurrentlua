@@ -1,4 +1,4 @@
-require 'concurrent'
+concurrent = require 'concurrent'
 
 function pong(n)
     concurrent.register('pong', concurrent.self())
@@ -7,7 +7,7 @@ function pong(n)
         if not msg then break end
         print('pong received message from ping')
         concurrent.send(msg.from, { from = { 'pong', 'pong@localhost' },
-            body = 'pong' })
+                                    body = 'pong' })
         print('pong sent reply to ping')
     end
     print('pong exiting')

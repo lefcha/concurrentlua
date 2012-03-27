@@ -1,21 +1,18 @@
 -- Submodule for the setting the system's options.
-local _option = {}
+local option = {}
 
-_option.options = {}            -- System options.
+option.options = {}             -- System options.
 
-_option.options.debug = false   -- Sets printing of debugging messages.
+option.options.debug = false    -- Sets printing of debugging messages.
 
 -- Returns the value of the option.
-function _option.getoption(option)
-    return _option.options[option]
+function option.getoption(key)
+    return option.options[key]
 end
 
 -- Sets the value of the option.
-function _option.setoption(option, value)
-    _option.options[option] = value
+function option.setoption(key, value)
+    option.options[key] = value
 end
 
-concurrent.setoption = _option.setoption
-concurrent.getoption = _option.getoption
-
-return _option
+return option

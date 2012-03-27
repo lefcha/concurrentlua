@@ -1,4 +1,4 @@
-require 'concurrent'
+concurrent = require 'concurrent'
 
 function internal(pid)
     concurrent.register('internal', concurrent.self())

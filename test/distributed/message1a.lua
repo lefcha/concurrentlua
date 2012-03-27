@@ -1,4 +1,4 @@
-require 'concurrent'
+concurrent = require 'concurrent'
 
 function receiver()
     concurrent.register('receiver', concurrent.self())

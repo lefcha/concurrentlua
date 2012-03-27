@@ -1,4 +1,4 @@
-require 'concurrent'
+concurrent = require 'concurrent'
 
 function pong(n)
     concurrent.register('pong', concurrent.self())

@@ -1,4 +1,4 @@
-require 'concurrent'
+concurrent = require 'concurrent'
 
 function pong(n)
     print('registered: ', unpack(concurrent.registered()))

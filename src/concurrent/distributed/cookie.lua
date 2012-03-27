@@ -1,21 +1,19 @@
 -- Submodule for setting the magic cookie.
-local _cookie = {}
+local concurrent
 
-_cookie.cookie = nil            -- The magic cookie used for authentication.
+local cookie = {}
+
+cookie.cookie = nil             -- The magic cookie used for authentication.
 
 -- Sets the magic cookie.
-function _cookie.setcookie(c)
-    if concurrent.node() then
-        _cookie.cookie = c
-    end
+function cookie.setcookie(c)
+    concurrent = concurrent or require 'concurrent'
+    if concurrent.node() then cookie.cookie = c end
 end
 
 -- Returns the set magic cookie.
-function _cookie.getcookie()
-    return _cookie.cookie
+function cookie.getcookie()
+    return cookie.cookie
 end
 
-concurrent.setcookie = _cookie.setcookie
-concurrent.getcookie = _cookie.getcookie
-
-return _cookie
+return cookie

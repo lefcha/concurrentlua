@@ -1,16 +1,11 @@
-require 'concurrent'
+concurrent = require 'concurrent'
 
 function ping(n, pid)
     concurrent.link(pid)
     for i = 1, n do
-        concurrent.send(pid, {
-            from = concurrent.self(),
-            body = 'ping'
-        })
+        concurrent.send(pid, { from = concurrent.self(), body = 'ping' })
         local msg = concurrent.receive()
-        if msg.body == 'pong' then
-            print('ping received pong')
-        end
+        if msg.body == 'pong' then print('ping received pong') end
     end
     print('ping finished')
     concurrent.exit('finished')

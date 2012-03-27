@@ -1,38 +1,39 @@
 -- Submodule for sending messages to remote processes.
-mime = require 'mime'
+local mime = require 'mime'
 
-local _message = {}
+local message = require 'concurrent.message'
+local concurrent, network
 
 -- The existing version of this function for message sending is renamed.
-_message._send = concurrent._message.send
+message._send = message.send
 
 -- Sends a message to local or remote processes.  If the process is local the
 -- old renamed version of this function is used, otherwise the message is send
 -- through the network.  The message is serialized and the magic cookie is also
 -- attached before sent.  Returns true for success and false otherwise.
-function _message.send(dest, mesg)
+function message.send(dest, mesg)
+    concurrent = concurrent or require 'concurrent'
+    network = network or require 'concurrent.distributed.network'
     if type(dest) ~= 'table' then
-        return _message._send(concurrent.whereis(dest), mesg)
+        return message._send(concurrent.whereis(dest), mesg)
     end
 
     local pid, node = unpack(dest)
-    local socket = concurrent._distributed._network.connect(node)
-    if not socket then
-        return false
-    end
+    local socket = network.connect(node)
+    if not socket then return false end
 
     local data
     if concurrent.getcookie() then
         data = concurrent.getcookie() .. ' ' .. tostring(pid) .. ' ' ..
-            _message.serialize(mesg) .. '\r\n'
+               message.serialize(mesg) .. '\r\n'
     else 
-        data = tostring(pid) .. ' ' .. _message.serialize(mesg) .. '\r\n'
+        data = tostring(pid) .. ' ' .. message.serialize(mesg) .. '\r\n'
     end
     local total = #data
     repeat 
         local n, errmsg, _ = socket:send(data, total - #data + 1)
         if not n and errmsg == 'closed' then
-            concurrent._distributed._network.disconnect(node)
+            network.disconnect(node)
             return false
         end
         total = total - n
@@ -45,7 +46,7 @@ end
 
 -- Serializes an object that can be any of: nil, boolean, number, string, table,
 -- function.  Returns the serialized object.
-function _message.serialize(obj)
+function message.serialize(obj)
     local t = type(obj)
     if t == 'nil' or t == 'boolean' or t == 'number' then
         return tostring(obj)
@@ -53,16 +54,16 @@ function _message.serialize(obj)
         return string.format("%q", obj)
     elseif t == 'function' then
         return 'loadstring((mime.unb64([[' .. (mime.b64(string.dump(obj))) ..
-            ']])))'
+               ']])))'
     elseif t == 'table' then
         local t = '{'
         for k, v in pairs(obj) do
             if type(k) == 'number' or type(k) == 'boolean' then
                 t = t .. ' [' .. tostring(k) .. '] = ' ..
-                    _message.serialize(v) .. ','
+                    message.serialize(v) .. ','
             else
                 t = t .. ' ["' .. tostring(k) .. '"] = ' ..
-                    _message.serialize(v) .. ','
+                    message.serialize(v) .. ','
             end
         end
         t =  t .. ' }'
@@ -72,6 +73,4 @@ function _message.serialize(obj)
     end
 end
 
-concurrent.send = _message.send
-
-return _message
+return message

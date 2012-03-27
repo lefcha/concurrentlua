@@ -1,4 +1,4 @@
-require 'concurrent'
+concurrent = require 'concurrent'
 
 function receiver()
     local msg  = concurrent.receive()
@@ -13,9 +13,12 @@ function receiver()
 end
 
 function sender(pid)
-    concurrent.send(pid, { from = concurrent.self(), integer = 9634,
-        float = 96.34, string = 'hello world', table = { 'hello, world',
-        hello = 'world' }, callme = function () return 'hello world!' end })
+    concurrent.send(pid, { from = concurrent.self(),
+                           integer = 9634,
+                           float = 96.34,
+                           string = 'hello world',
+                           table = { 'hello, world', hello = 'world' },
+                           callme = function () return 'hello world!' end })
 end
 
 pid = concurrent.spawn(receiver)

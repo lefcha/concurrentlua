@@ -1,33 +1,89 @@
 -- Main module for concurrent programming that loads all the submodules.
-concurrent = {}
+local concurrent = {}
 
-concurrent._option = require 'concurrent.option'
+local mod
 
-concurrent._process = require 'concurrent.process'
-concurrent._message = require 'concurrent.message'
-concurrent._scheduler = require 'concurrent.scheduler'
+mod = require 'concurrent.option'
+concurrent.setoption = mod.setoption
+concurrent.getoption = mod.getoption
 
-concurrent._register = require 'concurrent.register'
+mod = require 'concurrent.process'
+concurrent.spawn = mod.spawn
+concurrent.self = mod.self
+concurrent.isalive = mod.isalive
+concurrent.exit = mod.exit
+concurrent.whereis = mod.whereis
 
-concurrent._link = require 'concurrent.link'
-concurrent._monitor = require 'concurrent.monitor'
+mod = require 'concurrent.message'
+concurrent.send = mod.send
+concurrent.receive = mod.receive
 
-concurrent._root = require 'concurrent.root'
+mod = require 'concurrent.scheduler'
+concurrent.step = mod.step
+concurrent.tick = mod.tick
+concurrent.loop = mod.loop
+concurrent.interrupt = mod.interrupt
+concurrent.sleep = mod.sleep
 
--- Main module for distributed programming that loads all the submodules.
-concurrent._distributed = {}
+mod = require 'concurrent.register'
+concurrent.register = mod.register
+concurrent.unregister = mod.unregister
+concurrent.registered = mod.registered
+concurrent.whereis = mod.whereis
 
-concurrent._distributed._network = require 'concurrent.distributed.network'
-concurrent._distributed._node = require 'concurrent.distributed.node'
-concurrent._distributed._cookie = require 'concurrent.distributed.cookie'
+mod = require 'concurrent.link'
+concurrent.link = mod.link
+concurrent.unlink = mod.unlink
+concurrent.spawnlink = mod.spawnlink
 
-concurrent._distributed._process = require 'concurrent.distributed.process'
-concurrent._distributed._message = require 'concurrent.distributed.message'
-concurrent._distributed._scheduler = require 'concurrent.distributed.scheduler'
+mod = require 'concurrent.monitor'
+concurrent.monitor = mod.monitor
+concurrent.demonitor = mod.demonitor
+concurrent.spawnmonitor = mod.spawnmonitor
 
-concurrent._distributed._register = require 'concurrent.distributed.register'
+mod = require 'concurrent.root'
+concurrent.self = mod.self
+concurrent.isalive = mod.isalive
 
-concurrent._distributed._link = require 'concurrent.distributed.link'
-concurrent._distributed._monitor = require 'concurrent.distributed.monitor'
+mod = require 'concurrent.distributed.network'
+concurrent.init = mod.init
+concurrent.shutdown = mod.shutdown
+
+mod = require 'concurrent.distributed.node'
+concurrent.node = mod.node
+concurrent.nodes = mod.nodes
+concurrent.isnodealive = mod.isnodealive
+concurrent.monitornode = mod.monitornode
+concurrent.demonitornode = mod.demonitornode
+
+mod = require 'concurrent.distributed.cookie'
+concurrent.setcookie = mod.setcookie
+concurrent.getcookie = mod.getcookie
+
+mod = require 'concurrent.distributed.process'
+concurrent.spawn = mod.spawn
+
+mod = require 'concurrent.distributed.message'
+concurrent.send = mod.send
+
+mod = require 'concurrent.distributed.scheduler'
+concurrent.step = mod.step
+concurrent.tick = mod.tick
+concurrent.loop = mod.loop
+
+mod = require 'concurrent.distributed.register'
+concurrent.register = mod.register
+concurrent.unregister = mod.unregister
+concurrent.whereis = mod.whereis
+
+mod = require 'concurrent.distributed.link'
+concurrent.link = mod.link
+concurrent.spawnlink = mod.spawnlink
+concurrent.unlink = mod.unlink
+
+mod = require 'concurrent.distributed.monitor'
+concurrent.monitor = mod.monitor
+concurrent.spawnmonitor = mod.spawnmonitor
+concurrent.demonitor = mod.demonitor
 
 return concurrent

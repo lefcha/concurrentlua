@@ -1,4 +1,4 @@
-require 'concurrent'
+concurrent = require 'concurrent'
 
 function ping(pid)
     concurrent.register('ping', concurrent.self())

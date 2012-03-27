@@ -1,4 +1,4 @@
-require 'concurrent'
+concurrent = require 'concurrent'
 
 function internal(pid)
     concurrent.register('internal', concurrent.self())
@@ -9,7 +9,8 @@ function internal(pid)
         print('internal received message from root')
 
         concurrent.send(pid, { from = { concurrent.self(),
-            'internal@localhost' }, body = 'ping' })
+                                        'internal@localhost' },
+                               body = 'ping' })
         print('internal sent message to leaf')
     end
     print('internal received DOWN and exiting')

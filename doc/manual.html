@@ -151,7 +151,7 @@
   just prints a message as many times as specified:</p>
 
   <div class="verbatim"><pre>
-require 'concurrent'
+concurrent = require 'concurrent'
 
 function hello_world(times)
     for i = 1, times do print('hello world') end
@@ -173,7 +173,7 @@ done</pre></div>
   <p>First the system is loaded:</p>
 
   <div class="verbatim"><pre>
-require 'concurrent'</pre></div>
+concurrent = require 'concurrent'</pre></div>
 
   <p>The function that the process will execute is defined next:</p>
 
@@ -203,7 +203,7 @@ concurrent.loop()</pre></div>
   then terminate:</p>
 
   <div class="verbatim"><pre>
-require 'concurrent'
+concurrent = require 'concurrent'
 
 function pong()
     while true do
@@ -220,19 +220,11 @@ end
 
 function ping(n, pid)
     for i = 1, n do
-        concurrent.send(pid, {
-            from = concurrent.self(),
-            body = 'ping'
-        })
+        concurrent.send(pid, { from = concurrent.self(), body = 'ping' })
         local msg = concurrent.receive()
-        if msg.body == 'pong' then
-            print('ping received pong')
-        end
+        if msg.body == 'pong' then print('ping received pong') end
     end
-    concurrent.send(pid, {
-        from = concurrent.self(),
-        body = 'finished'
-    })
+    concurrent.send(pid, { from = concurrent.self(), body = 'finished' })
     print('ping finished')
 end
 
@@ -263,10 +255,7 @@ concurrent.spawn(ping, 3, pid)</pre></div>
   <p>The <em>ping</em> process sends a message:</p>
 
   <div class="verbatim"><pre>
-concurrent.send(pid, {
-    from = concurrent.self(),
-    body = 'ping'
-})</pre></div>
+concurrent.send(pid, { from = concurrent.self(), body = 'ping' })</pre></div>
 
   <p>The <em>pong</em> process waits for a message to arrive and saves it in a
   variable when it does:</p>
@@ -277,7 +266,7 @@ local msg = concurrent.receive()</pre></div>
   <p>The <em>pong</em> process replies:</p>
 
   <div class="verbatim"><pre>
-  concurrent.send(msg.from, { body = 'pong' })</pre></div>
+concurrent.send(msg.from, { body = 'pong' })</pre></div>
 
   <p>The <em>pong</em> process terminates after having received a notification
   from the <em>ping</em> process.</p>
@@ -290,7 +279,7 @@ local msg = concurrent.receive()</pre></div>
 
   <div class="verbatim">
     <pre>
-require 'concurrent'
+concurrent = require 'concurrent'
 
 function pong()
     while true do
@@ -307,19 +296,11 @@ end
 
 function ping(n)
     for i = 1, n do
-        concurrent.send('pong', {
-            from = concurrent.self(),
-            body = 'ping'
-        })
+        concurrent.send('pong', { from = concurrent.self(), body = 'ping' })
         local msg = concurrent.receive()
-        if msg.body == 'pong' then
-            print('ping received pong')
-        end
+        if msg.body == 'pong' then print('ping received pong') end
     end
-    concurrent.send('pong', {
-        from = concurrent.self(),
-        body = 'finished'
-    })
+    concurrent.send('pong', { from = concurrent.self(), body = 'finished' })
     print('ping finished')
 end
 
@@ -333,18 +314,13 @@ concurrent.loop()</pre></div>
   <em>ping</em> process sends messages to:</p>
 
   <div class="verbatim"><pre>
-concurrent.send('pong', {
-    from = concurrent.self(),
-    body = 'ping'
-})</pre></div>
+concurrent.send('pong', { from = concurrent.self(), body = 'ping' })</pre></div>
 
   <p>And:</p>
 
   <div class="verbatim"><pre>
-concurrent.send('pong', {
-    from = concurrent.self(),
-    body = 'finished'
-})</pre></div>
+concurrent.send('pong', { from = concurrent.self(), body = 'finished' })</pre>
+  </div>
 
   <p>And the <em>pong</em> process now registers its name:</p>
 
@@ -364,7 +340,7 @@ concurrent.register('pong', pid)</pre></div>
   <p>The code for the <em>pong</em> process:</p>
 
   <div class="verbatim"><pre>
-require 'concurrent'
+concurrent = require 'concurrent'
 
 function pong()
     while true do
@@ -390,23 +366,19 @@ concurrent.shutdown()</pre></div>
   <p>And the code for the <em>ping</em> process:</p>
 
   <div class="verbatim"><pre>
-require 'concurrent'
+concurrent = require 'concurrent'
 
 function ping(n)
     for i = 1, n do
-        concurrent.send({ 'pong', 'pong@gaia' }, {
-            from = { concurrent.self(), concurrent.node() },
-            body = 'ping'
-        })
+        concurrent.send({ 'pong', 'pong@gaia' },
+                        { from = { concurrent.self(), concurrent.node() },
+                          body = 'ping' })
         local msg = concurrent.receive()
-        if msg.body == 'pong' then
-            print('ping received pong')
-        end
+        if msg.body == 'pong' then print('ping received pong') end
     end
-    concurrent.send({ 'pong', 'pong@gaia' }, {
-        from = { concurrent.self(), concurrent.node() },
-        body = 'finished'
-    })
+    concurrent.send({ 'pong', 'pong@gaia' },
+                    { from = { concurrent.self(), concurrent.node() },
+                      body = 'finished' })
     print('ping finished')
 end
 
@@ -462,18 +434,16 @@ concurrent.shutdown()</pre></div>
   on:</p>
 
   <div class="verbatim"><pre>
-concurrent.send({ 'pong', 'pong@gaia' }, {
-    from = { concurrent.self(), concurrent.node() },
-    body = 'ping'
-})</pre></div>
+concurrent.send({ 'pong', 'pong@gaia' },
+                { from = { concurrent.self(), concurrent.node() },
+                  body = 'ping' })</pre></div>
 
   <p>And later:</p>
 
   <div class="verbatim"><pre>
-concurrent.send({ 'pong', 'pong@gaia' }, {
-    from = { concurrent.self(), concurrent.node() },
-    body = 'finished'
-})</pre></div>
+concurrent.send({ 'pong', 'pong@gaia' },
+                { from = { concurrent.self(), concurrent.node() },
+                  body = 'finished' })</pre></div>
 
   <h3>Handling error</h3>
 
@@ -483,19 +453,14 @@ concurrent.send({ 'pong', 'pong@gaia' }, {
   be used to link processes:</p>
 
   <div class="verbatim"><pre>
-require 'concurrent'
+concurrent = require 'concurrent'
 
 function ping(n, pid)
     concurrent.link(pid)
     for i = 1, n do
-        concurrent.send(pid, {
-            from = concurrent.self(),
-            body = 'ping'
-        })
+        concurrent.send(pid, { from = concurrent.self(), body = 'ping' })
         local msg = concurrent.receive()
-        if msg.body == 'pong' then
-            print('ping received pong')
-        end
+        if msg.body == 'pong' then print('ping received pong') end
     end
     print('ping finished')
     concurrent.exit('finished')
@@ -546,7 +511,7 @@ concurrent.exit('finished')</pre></div>
   this case a special message is received:</p>
 
   <div class="verbatim"><pre>
-require 'concurrent'
+concurrent = require 'concurrent'
 
 concurrent.setoption('trapexit', true)
 
@@ -566,14 +531,9 @@ end
 function ping(n, pid)
     concurrent.link(pid)
     for i = 1, n do
-        concurrent.send(pid, {
-            from = concurrent.self(),
-            body = 'ping'
-        })
+        concurrent.send(pid, { from = concurrent.self(), body = 'ping' })
         local msg = concurrent.receive()
-        if msg.body == 'pong' then
-            print('ping received pong')
-        end
+        if msg.body == 'pong' then print('ping received pong') end
     end
     print('ping finished')
     concurrent.exit('finished')
