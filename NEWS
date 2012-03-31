@@ -1,3 +1,15 @@
+ConcurrentLua 1.1 - 31 Mar 2012
+  - Codebase ported to Lua 5.2, but Lua 5.1 is considered the default version
+    to use for building it.
+  - The module() function is not used anymore, and instead the main module is
+    returned as a value by the require() function, while nothing is written to
+    the global environment.
+  - Removed prefix from the C module names, and made them submodules of the
+    main module.
+  * The way the module is to be loaded has changed, and now the return value of
+    the require call has to be stored in a variable of choice, as can be seen
+    in the documentation.
+
 ConcurrentLua 1.0.6 - 27 Feb 2011
   - Project moved to GitHub.
   - Updates to the documentation and other information files.
