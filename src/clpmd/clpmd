@@ -1,7 +1,7 @@
 #!/usr/bin/lua
 
-require 'socket'
-require 'copas'
+socket = require 'socket'
+copas = require 'copas'
 
 daemon = require 'concurrent.daemon'
 
